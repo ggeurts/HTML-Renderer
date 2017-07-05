@@ -17,11 +17,14 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TheArtOfDev.HtmlRenderer.Demo.Common;
+using TheArtOfDev.HtmlRenderer.PdfSharp;
 using TheArtOfDev.HtmlRenderer.WPF;
 
 namespace TheArtOfDev.HtmlRenderer.Demo.WPF
 {
-    /// <summary>
+	using global::PdfSharp;
+
+	/// <summary>
     /// Interaction logic for DemoWindow.xaml
     /// </summary>
     public partial class DemoWindow
@@ -111,10 +114,20 @@ namespace TheArtOfDev.HtmlRenderer.Demo.WPF
             w.ShowDialog();
         }
 
-        /// <summary>
-        /// Execute performance test by setting all sample HTMLs in a loop.
-        /// </summary>
-        private void OnRunPerformance_Click(object sender, EventArgs e)
+	    private void OnGeneratePdf_Click(object sender, RoutedEventArgs e)
+	    {
+		    using (var pdfDocument = PdfGenerator.GeneratePdf(_mainControl.GetHtml(), PageSize.A4))
+		    {
+			    var tmpFile = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+			    pdfDocument.Save(tmpFile);
+			    Process.Start(tmpFile);
+		    }
+		}
+
+		/// <summary>
+		/// Execute performance test by setting all sample HTMLs in a loop.
+		/// </summary>
+		private void OnRunPerformance_Click(object sender, EventArgs e)
         {
             _mainControl.UpdateLock = true;
             _toolBar.IsEnabled = false;
