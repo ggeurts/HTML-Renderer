@@ -83,6 +83,11 @@
     <Compile Include="Core\Handlers\StylesheetLoadHandler.cs" />
     <Compile Include="Core\HtmlRendererUtils.cs" />
     <Compile Include="Core\Parse\CssParser.cs" />
+    <Compile Include="Core\Parse\CssToken.cs" />
+    <Compile Include="Core\Parse\CssTokenData.cs" />
+    <Compile Include="Core\Parse\CssTokenFactory.cs" />
+    <Compile Include="Core\Parse\CssTokenizer.cs" />
+    <Compile Include="Core\Parse\CssTokenType.cs" />
     <Compile Include="Core\Parse\CssValueParser.cs" />
     <Compile Include="Core\Parse\DomParser.cs" />
     <Compile Include="Core\Parse\HtmlParser.cs" />

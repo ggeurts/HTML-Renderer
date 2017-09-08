@@ -167,6 +167,9 @@
   <ItemGroup>
     <EmbeddedResource Include="TestSamples\35.Breaking pages 2 - Tables.htm" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="TestSamples\36.Page headers and footers.htm" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
