@@ -20,7 +20,7 @@ using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 namespace TheArtOfDev.HtmlRenderer.Core.Parse
 {
-    /// <summary>
+	/// <summary>
     /// Handle css DOM tree generation from raw html and stylesheet.
     /// </summary>
     internal sealed class DomParser

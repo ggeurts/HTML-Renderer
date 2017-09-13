@@ -1,14 +1,18 @@
-namespace TheArtOfDev.HtmlRenderer.Core.Parse
+namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
+	using TheArtOfDev.HtmlRenderer.Core.Css;
+
 	public class CssTokenFactory
 	{
 		private readonly string _input;
 		private readonly CssStringTokenData _rawStringData;
+		private readonly CssStringTokenData _whiteSpaceData;
 
 		public CssTokenFactory(string input)
 		{
 			_input = input;
 			_rawStringData = new CssStringTokenData(input, null);
+			_whiteSpaceData = new CssStringTokenData(input, " ");
 		}
 
 		public CssToken CreateToken(int pos)
@@ -77,13 +81,13 @@ namespace TheArtOfDev.HtmlRenderer.Core.Parse
 				: unit == "%"
 					? CssTokenType.Percentage
 					: CssTokenType.Dimension;
-			if (isFloatingPoint) tokenType |= CssTokenType.NumberType;
-			return new CssToken(tokenType, startPos, length, new CssNumericTokenData(_input, value, unit));
+			if (isFloatingPoint) tokenType |= CssTokenType.FloatingPointType;
+			return new CssToken(tokenType, startPos, length, new CssTokenData<CssNumeric>(_input, new CssNumeric(value, unit)));
 		}
 
 		public CssToken CreateOperatorToken(int pos)
 		{
-			return new CssToken(CssTokenType.Operator | (CssTokenType)_input[pos], pos, 2, _rawStringData);
+			return new CssToken(CssTokenType.MatchOperator | (CssTokenType)_input[pos], pos, 2, _rawStringData);
 		}
 
 		public CssToken CreateColumnToken(int pos)
@@ -91,15 +95,15 @@ namespace TheArtOfDev.HtmlRenderer.Core.Parse
 			return new CssToken(CssTokenType.Column, pos, 2, _rawStringData);
 		}
 
-		public CssToken CreateUnicodeRangeToken(int startPos, int length, char rangeStart, char rangeEnd)
+		public CssToken CreateUnicodeRangeToken(int startPos, int length, int rangeStart, int rangeEnd)
 		{
-			return new CssToken(CssTokenType.UnicodeRange, startPos, length, new CssUnicodeRangeTokenData(_input, rangeStart, rangeEnd));
+			return new CssToken(CssTokenType.UnicodeRange, startPos, length, new CssTokenData<CssUnicodeRange>(_input, new CssUnicodeRange(rangeStart, rangeEnd)));
 		}
 
-		public CssToken CreateCommentToken(int startPos, int length)
-		{
-			return new CssToken(CssTokenType.Comment, startPos, length, _rawStringData);
-		}
+		//public CssToken CreateCommentToken(int startPos, int length)
+		//{
+		//	return new CssToken(CssTokenType.Comment, startPos, length, _rawStringData);
+		//}
 
 		public CssToken CreateCdoToken(int startPos)
 		{
@@ -113,7 +117,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Parse
 
 		public CssToken CreateWhitespaceToken(int startPos, int length)
 		{
-			return new CssToken(CssTokenType.Whitespace, startPos, length, _rawStringData);
+			return new CssToken(CssTokenType.Whitespace, startPos, length, _whiteSpaceData);
 		}
 	}
 }

@@ -845,21 +845,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Utils
         private static void WriteStylesheet(StringBuilder sb, CssData cssData)
         {
             sb.AppendLine("<style type=\"text/css\">");
-            foreach (var cssBlocks in cssData.MediaBlocks["all"])
-            {
-                sb.Append(cssBlocks.Key);
-                sb.Append(" { ");
-                foreach (var cssBlock in cssBlocks.Value)
-                {
-                    foreach (var property in cssBlock.Properties)
-                    {
-                        // TODO:a handle selectors
-                        sb.AppendFormat("{0}: {1};", property.Key, property.Value);
-                    }
-                }
-                sb.Append(" }");
-                sb.AppendLine();
-            }
+            cssData.MediaBlocks["all"].Write(sb);
             sb.AppendLine("</style>");
         }
 

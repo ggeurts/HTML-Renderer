@@ -1,9 +1,11 @@
-﻿namespace TheArtOfDev.HtmlRenderer.Core.Parse
+﻿namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
 	using System;
 	using System.Collections.Generic;
 	using System.Globalization;
+	using System.Linq;
 	using System.Text;
+	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public class CssTokenizer
 	{
@@ -18,10 +20,10 @@
 
 		private CssTokenizer(string input, int start, int count)
 		{
-			if (input == null) throw new ArgumentNullException(nameof(input));
-			if (start < 0 || start >= input.Length)
+			ArgChecker.AssertArgNotNull(input, nameof(input));
+			if (start < 0 || start > input.Length)
 			{
-				throw new ArgumentOutOfRangeException(nameof(start), "start must be greater than or equal to 0 and less than input length");
+				throw new ArgumentOutOfRangeException(nameof(start), "start must be greater than or equal to 0 and less than or equal to input length");
 			}
 			if (count < 0 || count + start > input.Length)
 			{
@@ -32,6 +34,13 @@
 			_factory = new CssTokenFactory(input);
 			_start = start;
 			_eof = start + count;
+		}
+
+		public static IEnumerable<CssToken> Tokenize(string input)
+		{
+			return input != null 
+				? new CssTokenizer(input, 0, input.Length).Tokenize()
+				: Enumerable.Empty<CssToken>();
 		}
 
 		public static IEnumerable<CssToken> Tokenize(string input, int start, int count)
@@ -194,6 +203,7 @@
 						if (IsNameStartCodePoint(_input[i]))
 						{
 							yield return ConsumeIdentifierLikeToken(ref i);
+							break;
 						}
 
 						yield return _factory.CreateToken(i++);
@@ -268,15 +278,16 @@
 						i++;
 						if (i >= _eof || TryConsumeNewline(ref i)) continue;
 
-						_valueBuilder.Append(ConsumeEscapedCodePoint(ref i));
+						ConsumeEscapedCodePoint(ref i, _valueBuilder);
 						break;
 					default:
 						_valueBuilder.Append(ch);
+						i++;
 						break;
 				}
-				i++;
 			}
 
+			i++;
 			return _factory.CreateStringToken(tokenStart, i - tokenStart, BuildValue(), false);
 		}
 
@@ -330,7 +341,7 @@
 						if (IsValidEscape(i))
 						{
 							i++;
-							_valueBuilder.Append(ConsumeEscapedCodePoint(ref i));
+							ConsumeEscapedCodePoint(ref i, _valueBuilder);
 							break;
 						}
 
@@ -362,7 +373,7 @@
 						if (IsValidEscape(i))
 						{
 							i++;
-							ConsumeEscapedCodePoint(ref i);
+							ConsumeEscapedCodePoint(ref i, null);
 						}
 						break;
 					default:
@@ -429,7 +440,7 @@
 				hexLength++;
 			}
 
-			char rangeStart, rangeEnd;
+			int rangeStart, rangeEnd;
 			if (i < _eof && hexLength < 6 && _input[i] == '?')
 			{
 				i++;
@@ -440,25 +451,25 @@
 					hexLength++;
 				}
 				var hexNumber = _input.Substring(hexStart, hexLength);
-				rangeStart = (char)int.Parse(hexNumber.Replace('?', '0'), NumberStyles.AllowHexSpecifier);
-				rangeEnd = (char)int.Parse(hexNumber.Replace('?', 'F'), NumberStyles.AllowHexSpecifier);
+				rangeStart = int.Parse(hexNumber.Replace('?', '0'), NumberStyles.AllowHexSpecifier);
+				rangeEnd = int.Parse(hexNumber.Replace('?', 'F'), NumberStyles.AllowHexSpecifier);
 			}
 			else
 			{
-				rangeStart = rangeEnd = (char)int.Parse(_input.Substring(hexStart, hexLength));
+				rangeStart = rangeEnd = int.Parse(_input.Substring(hexStart, hexLength), NumberStyles.AllowHexSpecifier);
 			}
 
 			if (i < _eof - 1 && _input[i] == '-' && IsHexDigit(_input[i + 1]))
 			{
-				hexStart = i++;
-				hexLength = 1;
+				hexStart = ++i;
+				hexLength = 0;
 				while (i < _eof && hexLength < 6 && IsHexDigit(_input[i]))
 				{
 					i++;
 					hexLength++;
 				}
 				var hexNumber = _input.Substring(hexStart, hexLength);
-				rangeEnd = (char)int.Parse(hexNumber, NumberStyles.AllowHexSpecifier);
+				rangeEnd = int.Parse(hexNumber, NumberStyles.AllowHexSpecifier);
 			}
 
 			result = _factory.CreateUnicodeRangeToken(tokenStart, i - tokenStart, rangeStart, rangeEnd);
@@ -480,7 +491,7 @@
 
 		private bool TryConsumeComment(ref int i)
 		{
-			if (i < _eof - 2) return false;
+			if (i > _eof - 2) return false;
 			if (_input[i] != '/' && _input[i + 1] != '*') return false;
 
 			i += 2;
@@ -495,6 +506,8 @@
 
 		private bool TryConsumeWhitespace(ref int i)
 		{
+			if (i >= _eof) return false;
+
 			switch (_input[i])
 			{
 				case '\t':
@@ -508,6 +521,8 @@
 
 		private bool TryConsumeNewline(ref int i)
 		{
+			if (i >= _eof) return false;
+
 			switch (_input[i])
 			{
 				case '\n':
@@ -533,40 +548,43 @@
 				return false;
 			}
 
+			// Consume any remainder of identifier
 			TryConsumeName(ref i, _valueBuilder);
+
 			result = BuildValue();
 			return true;
 		}
 
 		private bool TryConsumeIdentifierStart(ref int i, StringBuilder valueBuilder)
 		{
+			if (i >= _eof) return false;
+
+			var oldValueLength = valueBuilder.Length;
 			var j = i;
 			var ch = _input[j++];
+
+			if (ch == '-')
+			{
+				if (j >= _eof) return false;
+				valueBuilder.Append(ch);
+				ch = _input[j++];
+			}
+
 			if (IsNameStartCodePoint(ch))
 			{
-				i++;
 				valueBuilder.Append(ch);
+				i = j;
 				return true;
 			}
 
-			if (ch == '-' && j < _eof) return false;
+			if (IsValidEscape(j-1))
 			{
-				var nextChar = _input[j++];
-				if (IsNameStartCodePoint(nextChar))
-				{
-					i += 2;
-					valueBuilder.Append(ch).Append(nextChar);
-					return true;
-				}
-				if (j < _eof && IsValidEscape(nextChar, _input[j]))
-				{
-					i += 2;
-					valueBuilder.Append(ch);
-					valueBuilder.Append(ConsumeEscapedCodePoint(ref i));
-					return true;
-				}
+				ConsumeEscapedCodePoint(ref j, valueBuilder);
+				i = j;
+				return true;
 			}
 
+			valueBuilder.Length = oldValueLength;
 			return false;
 		}
 
@@ -598,7 +616,7 @@
 				else if (IsValidEscape(i))
 				{
 					i++;
-					valueBuilder.Append(ConsumeEscapedCodePoint(ref i));
+					ConsumeEscapedCodePoint(ref i, valueBuilder);
 				}
 				else
 				{
@@ -609,35 +627,48 @@
 			return i > nameStart;
 		}
 
-		private char ConsumeEscapedCodePoint(ref int i)
+		private void ConsumeEscapedCodePoint(ref int i, StringBuilder valueBuilder)
 		{
 			// EOF
-			if (i >= _eof) return REPLACEMENT_CHAR;
+			if (i >= _eof)
+			{
+				valueBuilder?.Append(REPLACEMENT_CHAR);
+				return;
+			}
 
 			// Hex encoded code point
 			var ch = _input[i++];
-			if (IsHexDigit(ch))
+			if (!IsHexDigit(ch))
 			{
-				var hexStart = i-1;
-				var hexLength = 1;
-				while (hexLength < 6 && IsHexDigit(_input[i]))
-				{
-					hexLength++;
-					i++;
-				}
-				TryConsumeWhitespace(ref i);
-
-				var codePoint = int.Parse(_input.Substring(hexStart, hexLength), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-				if (codePoint == 0 || codePoint > MAX_CODE_POINT) return REPLACEMENT_CHAR;
-
-				var result = (char)codePoint;
-				return char.IsSurrogate(result) 
-					? REPLACEMENT_CHAR 
-					: result;
+				valueBuilder?.Append(ch);
+				return;
 			}
 
-			// Current code point
-			return ch;
+			var hexStart = i-1;
+			var hexLength = 1;
+			while (i < _eof && hexLength < 6 && IsHexDigit(_input[i]))
+			{
+				hexLength++;
+				i++;
+			}
+			TryConsumeWhitespace(ref i);
+
+			if (valueBuilder != null)
+			{
+				var codePoint = int.Parse(_input.Substring(hexStart, hexLength), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
+				if (codePoint == 0 || codePoint > MAX_CODE_POINT || IsSurrogateCodePoint(codePoint))
+				{
+					valueBuilder.Append(REPLACEMENT_CHAR);
+				}
+				else if (codePoint <= char.MaxValue)
+				{
+					valueBuilder.Append((char) codePoint);
+				}
+				else
+				{
+					valueBuilder.Append(char.ConvertFromUtf32(codePoint));
+				}
+			}
 		}
 
 		private bool TryConsumeNumber(ref int i, out bool isFloatingPoint)
@@ -652,7 +683,7 @@
 			if (j < _eof)
 			{
 				var ch = _input[j++];
-				if (ch == 'E' && ch == 'e')
+				if (ch == 'E' || ch == 'e')
 				{
 					TryConsumeSign(ref j);
 					if (TryConsumeUnsignedInteger(ref j))
@@ -668,7 +699,7 @@
 
 		private bool TryConsumeDecimalFraction(ref int i)
 		{
-			if (_input[i] != '.' || i >= _eof - 1 || !IsDigit(_input[i + 1])) return false;
+			if (i >= _eof || _input[i] != '.' || i >= _eof - 1 || !IsDigit(_input[i + 1])) return false;
 
 			i += 2;
 			while (i < _eof && IsDigit(_input[i]))
@@ -680,6 +711,8 @@
 
 		private void TryConsumeSign(ref int i)
 		{
+			if (i >= _eof) return;
+
 			var ch = _input[i];
 			if (ch == '+' || ch == '-') i++;
 		}
@@ -696,7 +729,9 @@
 
 		private bool IsValidEscape(int i)
 		{
-			return i < _eof - 1 && IsValidEscape(_input[i], _input[i + 1]);
+			if (i >= _eof || _input[i] != '\\') return false;
+			return i == _eof - 1 
+				|| !IsNewLine(_input[i + 1]);
 		}
 
 		private static bool IsDigit(char ch)
@@ -744,9 +779,9 @@
 			return IsNameStartCodePoint(ch) || IsDigit(ch) || ch == '-';
 		}
 
-		private static bool IsValidEscape(char ch1, char ch2)
+		private static bool IsSurrogateCodePoint(int codePoint)
 		{
-			return ch1 == '\\' && !IsNewLine(ch2);
+			return codePoint >= 0xD800 && codePoint <= 0xDFFF;
 		}
 
 		private string BuildValue()

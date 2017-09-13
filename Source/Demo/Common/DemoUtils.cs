@@ -17,7 +17,7 @@ using TheArtOfDev.HtmlRenderer.Core.Entities;
 
 namespace TheArtOfDev.HtmlRenderer.Demo.Common
 {
-    public class DemoUtils
+	public class DemoUtils
     {
         private const int Iterations = 20;
 

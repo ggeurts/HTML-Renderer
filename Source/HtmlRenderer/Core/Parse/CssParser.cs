@@ -21,7 +21,7 @@ using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 namespace TheArtOfDev.HtmlRenderer.Core.Parse
 {
-    /// <summary>
+	/// <summary>
     /// Parser to parse CSS stylesheet source string into CSS objects.
     /// </summary>
     internal sealed class CssParser
@@ -31,12 +31,17 @@ namespace TheArtOfDev.HtmlRenderer.Core.Parse
         /// <summary>
         /// split CSS rule
         /// </summary>
-        private static readonly char[] _cssBlockSplitters = new[] { '}', ';' };
+        private static readonly char[] _cssBlockSplitters = { '}', ';' };
 
-        /// <summary>
-        /// 
-        /// </summary>
-        private readonly RAdapter _adapter;
+	    /// <summary>
+	    /// split CSS rule
+	    /// </summary>
+	    private static readonly char[] _cssWhitespace = { ' ', '\t' };
+
+		/// <summary>
+		/// 
+		/// </summary>
+		private readonly RAdapter _adapter;
 
         /// <summary>
         /// Utility for value parsing.
@@ -46,7 +51,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Parse
         /// <summary>
         /// The chars to trim the css class name by
         /// </summary>
-        private static readonly char[] _cssClassTrimChars = new[] { '\r', '\n', '\t', ' ', '-', '!', '<', '>' };
+        private static readonly char[] _cssClassTrimChars = { '\r', '\n', '\t', ' ', '-', '!', '<', '>' };
 
         #endregion
 
@@ -99,7 +104,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Parse
 
                 ParseStyleBlocks(cssData, stylesheet);
 
-                ParseMediaStyleBlocks(cssData, stylesheet);
+                ParseAtRuleBlocks(cssData, stylesheet);
             }
         }
 
@@ -225,56 +230,80 @@ namespace TheArtOfDev.HtmlRenderer.Core.Parse
         /// </summary>
         /// <param name="cssData">the CSS data to fill with parsed CSS objects</param>
         /// <param name="stylesheet">the stylesheet to parse</param>
-        private void ParseMediaStyleBlocks(CssData cssData, string stylesheet)
+        private void ParseAtRuleBlocks(CssData cssData, string stylesheet)
         {
             int startIdx = 0;
-            string atrule;
-            while ((atrule = RegexParserUtils.GetCssAtRules(stylesheet, ref startIdx)) != null)
+			string atrule;
+
+			while ((atrule = RegexParserUtils.GetCssAtRules(stylesheet, ref startIdx)) != null)
             {
                 //Just process @media rules
-                if (!atrule.StartsWith("@media", StringComparison.InvariantCultureIgnoreCase))
-                    continue;
-
-                //Extract specified media types
-                MatchCollection types = RegexParserUtils.Match(RegexParserUtils.CssMediaTypes, atrule);
-
-                if (types.Count == 1)
-                {
-                    string line = types[0].Value;
-
-                    if (line.StartsWith("@media", StringComparison.InvariantCultureIgnoreCase) && line.EndsWith("{"))
-                    {
-                        //Get specified media types in the at-rule
-                        string[] media = line.Substring(6, line.Length - 7).Split(' ');
-
-                        //Scan media types
-                        foreach (string t in media)
-                        {
-                            if (!String.IsNullOrEmpty(t.Trim()))
-                            {
-                                //Get blocks inside the at-rule
-                                var insideBlocks = RegexParserUtils.Match(RegexParserUtils.CssBlocks, atrule);
-
-                                //Scan blocks and feed them to the style sheet
-                                foreach (Match insideBlock in insideBlocks)
-                                {
-                                    FeedStyleBlock(cssData, insideBlock.Value, t.Trim());
-                                }
-                            }
-                        }
-                    }
-                }
+	            if (atrule.StartsWith("@media", StringComparison.InvariantCultureIgnoreCase))
+	            {
+		            ParseMediaAtRule(cssData, atrule);
+	            }
+				else if (atrule.StartsWith("@page", StringComparison.InvariantCultureIgnoreCase))
+	            {
+		            ParsePageAtRule(cssData, atrule);
+	            }
             }
         }
 
-        /// <summary>
-        /// Feeds the style with a block about the specific media.<br/>
-        /// When no media is specified, "all" will be used.
-        /// </summary>
-        /// <param name="cssData"> </param>
-        /// <param name="block">the CSS block to handle</param>
-        /// <param name="media">optional: the media (default - all)</param>
-        private void FeedStyleBlock(CssData cssData, string block, string media = "all")
+	    /// <summary>
+	    /// Parse given stylesheet for media CSS blocks<br/>
+	    /// This blocks are added under the specific media block they are found.
+	    /// </summary>
+	    /// <param name="cssData">the CSS data to fill with parsed CSS objects</param>
+	    /// <param name="atrule">the @media rule to parse</param>
+	    private void ParseMediaAtRule(CssData cssData, string atrule)
+	    {
+			//Extract specified media types
+			MatchCollection types = RegexParserUtils.Match(RegexParserUtils.CssMediaTypes, atrule);
+
+		    if (types.Count == 1)
+		    {
+			    string line = types[0].Value;
+
+				//Get blocks inside the at-rule
+				var insideBlocks = RegexParserUtils.Match(RegexParserUtils.CssBlocks, atrule);
+
+				//Get specified media types in the at-rule
+				string[] mediaTypes = line.Substring(6, line.Length - 7).Split(_cssWhitespace, StringSplitOptions.RemoveEmptyEntries);
+
+				//Scan media types
+				foreach (string mediaType in mediaTypes)
+				{
+					//Scan blocks and feed them to the style sheet
+					foreach (Match insideBlock in insideBlocks)
+					{
+						FeedStyleBlock(cssData, insideBlock.Value, mediaType);
+					}
+				}
+		    }
+	    }
+
+	    private void ParsePageAtRule(CssData cssData, string atrule)
+	    {
+		    //Get blocks inside the at-rule
+		    var insideBlocks = RegexParserUtils.Match(RegexParserUtils.CssBlocks, atrule);
+			// TODO: add page rules
+
+		    int startIdx = 0;
+		    string nestedAtrule;
+		    while ((nestedAtrule = RegexParserUtils.GetCssAtRules(atrule, ref startIdx)) != null)
+		    {
+			    // TODO: add margin box rules
+		    }
+		}
+
+		/// <summary>
+		/// Feeds the style with a block about the specific media.<br/>
+		/// When no media is specified, "all" will be used.
+		/// </summary>
+		/// <param name="cssData"> </param>
+		/// <param name="block">the CSS block to handle</param>
+		/// <param name="media">optional: the media (default - all)</param>
+		private void FeedStyleBlock(CssData cssData, string block, string media = "all")
         {
             int startIdx = block.IndexOf("{", StringComparison.Ordinal);
             int endIdx = startIdx > -1 ? block.IndexOf("}", startIdx) : -1;
