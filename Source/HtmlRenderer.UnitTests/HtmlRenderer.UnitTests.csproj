@@ -50,17 +50,26 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\CssDataTests.cs" />
+    <Compile Include="Core\Css\Parsing\CssParserTests.cs" />
     <Compile Include="Core\Css\Parsing\CssTokenizerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HtmlRenderer\HtmlRenderer.csproj">
       <Project>{FE611685-391F-4E3E-B27E-D3150E51E49B}</Project>
       <Name>HtmlRenderer</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NSubstitute">
+      <Version>2.0.3</Version>
+    </PackageReference>
+    <PackageReference Include="NUnit">
+      <Version>3.8.1</Version>
+    </PackageReference>
+    <PackageReference Include="System.Collections.Immutable">
+      <Version>1.4.0</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

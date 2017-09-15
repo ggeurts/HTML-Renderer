@@ -1,6 +1,7 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
 	using System.Collections.Generic;
+	using System.Diagnostics.CodeAnalysis;
 	using TheArtOfDev.HtmlRenderer.Core.Css;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
@@ -63,13 +64,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			get { return (_tokenType & CssTokenType.Invalid) != 0; }
 		}
 
-		public bool IsBadStringToken
+		public bool IsDimension
 		{
-			get
-			{
-				const CssTokenType BAD_STRING = CssTokenType.String | CssTokenType.Invalid;
-				return (_tokenType & BAD_STRING) == BAD_STRING;
-			}
+			get { return (_tokenType & CssTokenType.Dimension) == CssTokenType.Dimension; }
+		}
+
+		public bool IsIdentifier
+		{
+			get { return (_tokenType & CssTokenType.Identifier) == CssTokenType.Identifier; }
 		}
 
 		public bool IsMatchOperator
@@ -82,9 +84,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			get { return (_tokenType & CssTokenType.Number) == CssTokenType.Number; }
 		}
 
-		public bool IsString
+		public bool IsPercentage
 		{
-			get { return (_tokenType & CssTokenType.String) == CssTokenType.String; }
+			get { return (_tokenType & CssTokenType.Percentage) == CssTokenType.Percentage; }
+		}
+
+		public bool IsQuotedString
+		{
+			get { return (_tokenType & CssTokenType.QuotedString) == CssTokenType.QuotedString; }
 		}
 
 		public bool IsWhitespace
@@ -103,9 +110,15 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 				&& _tokenType == (CssTokenType.Delimiter | (CssTokenType)value);
 		}
 
-		internal CssSimpleComponent CreateComponent()
+		internal CssValue CreateComponent()
 		{
 			return _data?.CreateComponent(ref this);
+		}
+
+		[SuppressMessage("ReSharper", "AssignNullToNotNullAttribute")]
+		public override string ToString()
+		{
+			return _data?.GetRawValue(ref this);
 		}
 
 		private class CssTokenValueEqualityComparer : EqualityComparer<CssToken>

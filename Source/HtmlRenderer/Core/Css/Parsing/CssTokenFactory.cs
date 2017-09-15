@@ -69,7 +69,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 		public CssToken CreateStringToken(int startPos, int length, string value, bool isInvalid)
 		{
-			var tokenType = CssTokenType.String;
+			var tokenType = CssTokenType.QuotedString;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
 			return new CssToken(tokenType, startPos, length, new CssStringTokenData(_input, value));
 		}

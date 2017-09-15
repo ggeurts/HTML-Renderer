@@ -305,7 +305,7 @@
 				case '\'':
 				case '"':
 					var stringToken = ConsumeStringToken(ref i);
-					if (!stringToken.IsBadStringToken)
+					if (!stringToken.IsInvalid)
 					{
 						while (TryConsumeWhitespace(ref i)) { }
 						if (i >= _eof || _input[i] == ')')

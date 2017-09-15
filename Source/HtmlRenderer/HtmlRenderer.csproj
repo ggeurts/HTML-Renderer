@@ -47,7 +47,12 @@
     <Compile Include="..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Core\Css\CssCharEqualityComparer.cs" />
+    <Compile Include="Core\Css\CssEqualityComparer.cs" />
+    <Compile Include="Core\Css\CssNode.cs" />
+    <Compile Include="Core\Css\CssValue.cs" />
     <Compile Include="Core\Css\Parsing\CssGrammar.cs" />
+    <Compile Include="Core\Css\Parsing\CssStylesheetGrammar.cs" />
     <Compile Include="Core\Entities\CssPageRuleCollection.cs" />
     <Compile Include="Core\Entities\CssBlockCollection.cs" />
     <Compile Include="Core\CssDefaults.cs" />
@@ -96,7 +101,6 @@
     <Compile Include="Core\Css\CssCompositeComponent.cs" />
     <Compile Include="Core\Css\CssFunction.cs" />
     <Compile Include="Core\Css\CssNumeric.cs" />
-    <Compile Include="Core\Css\CssSimpleComponent.cs" />
     <Compile Include="Core\Css\CssUnicodeRange.cs" />
     <Compile Include="Core\Css\CssAtRule.cs" />
     <Compile Include="Core\Css\CssComponent.cs" />
@@ -104,7 +108,6 @@
     <Compile Include="Core\Css\CssQualifiedRule.cs" />
     <Compile Include="Core\Css\CssRule.cs" />
     <Compile Include="Core\Css\CssStyleSheet.cs" />
-    <Compile Include="Core\Css\ICssDeclaration.cs" />
     <Compile Include="Core\Utils\HashUtility.cs" />
     <Compile Include="Core\Parse\CssParser.cs" />
     <Compile Include="Core\Css\Parsing\CssParser.cs" />

@@ -122,7 +122,7 @@
 
 		#endregion
 
-		#region Number tokens
+		#region Numeric tokens
 
 		[Test]
 		[TestCase("0", 0)]
@@ -157,6 +157,42 @@
 		public void TokenizeFloatingPointNumberToken(string css, double expectedValue)
 		{
 			VerifyTokenizer(css, NumberLiteral(expectedValue, true));
+		}
+
+		[Test]
+		[TestCase("+0.2pt", 0.2, "pt")]
+		[TestCase("-987654.321mm", -987654.321, "mm")]
+		[TestCase("1E45cm", 1E45, "cm")]
+		public void TokenizeFloatingPointDimensionToken(string css, double expectedValue, string expectedUnit)
+		{
+			VerifyTokenizer(css, DimensionLiteral(expectedValue, expectedUnit, true));
+		}
+
+		[Test]
+		[TestCase("+2pt", 2, "pt")]
+		[TestCase("-987654mm", -987654, "mm")]
+		[TestCase("1q", 1, "q")]
+		public void TokenizeIntegerDimensionToken(string css, double expectedValue, string expectedUnit)
+		{
+			VerifyTokenizer(css, DimensionLiteral(expectedValue, expectedUnit));
+		}
+
+		[Test]
+		[TestCase("+0.2%", 0.2)]
+		[TestCase("-987654.321%", -987654.321)]
+		[TestCase("1E45%", 1E45)]
+		public void TokenizeFloatingPointPercentageToken(string css, double expectedValue)
+		{
+			VerifyTokenizer(css, PercentageLiteral(expectedValue, true));
+		}
+
+		[Test]
+		[TestCase("+2%", 2)]
+		[TestCase("-987654%", -987654)]
+		[TestCase("1%", 1)]
+		public void TokenizeIntegerPercentageToken(string css, double expectedValue)
+		{
+			VerifyTokenizer(css, PercentageLiteral(expectedValue));
 		}
 
 		#endregion
@@ -415,7 +451,7 @@
 				switch (expectedToken.TokenType)
 				{
 					case CssTokenType.Identifier:
-					case CssTokenType.String:
+					case CssTokenType.QuotedString:
 						Assert.That(token.StringValue, Is.EqualTo(expectedToken.Value), "[Token {0}]StringValue", tokenIndex);
 						break;
 					case CssTokenType.MatchOperator:
@@ -426,7 +462,7 @@
 						Assert.That(token.UnicodeRangeValue, Is.EqualTo((CssUnicodeRange)expectedToken.Value), "[Token {0}]UnicodeRangeValue", tokenIndex);
 						break;
 					default:
-						if (token.IsNumber)
+						if (token.IsNumber || token.IsDimension || token.IsPercentage)
 						{
 							Assert.That(token.NumericValue, Is.EqualTo((CssNumeric)expectedToken.Value), "[Token {0}]NumericValue", tokenIndex);
 						}
@@ -449,6 +485,11 @@
 			return new TokenData(CssTokenType.Delimiter | (CssTokenType)(value & 0xFF));
 		}
 
+		private static TokenData DimensionLiteral(double value, string unit, bool isFloatingPoint = false)
+		{
+			return new TokenData(CssTokenType.Dimension | (isFloatingPoint ? CssTokenType.FloatingPointType : 0), new CssNumeric(value, unit));
+		}
+
 		private static TokenData Hash(string value, bool isIdentifier = false)
 		{
 			return new TokenData(CssTokenType.Hash | (isIdentifier ? CssTokenType.IdentifierType : 0), value);
@@ -464,9 +505,14 @@
 			return new TokenData(CssTokenType.Number | (isFloatingPoint ? CssTokenType.FloatingPointType : 0), new CssNumeric(value, null));
 		}
 
+		private static TokenData PercentageLiteral(double value, bool isFloatingPoint = false)
+		{
+			return new TokenData(CssTokenType.Percentage | (isFloatingPoint ? CssTokenType.FloatingPointType : 0), new CssNumeric(value, "%"));
+		}
+
 		private static TokenData StringLiteral(string value, bool isValid = true)
 		{
-			return new TokenData(CssTokenType.String | (isValid ? 0 : CssTokenType.Invalid), value);
+			return new TokenData(CssTokenType.QuotedString | (isValid ? 0 : CssTokenType.Invalid), value);
 		}
 
 		private static TokenData Token(CssTokenType tokenType)

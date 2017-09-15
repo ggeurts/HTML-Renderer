@@ -2,24 +2,41 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 {
 	using System;
 	using System.Diagnostics.CodeAnalysis;
+	using System.Globalization;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public struct CssNumeric : IEquatable<CssNumeric>
 	{
-		public double Value { get; }
-		public string Unit { get; }
+		private readonly double _value;
+		private readonly string _unit;
+
+		public CssNumeric(double value)
+		{
+			_value = value;
+			_unit = null;
+		}
 
 		public CssNumeric(double value, string unit)
 		{
-			this.Value = value;
-			this.Unit = string.IsNullOrEmpty(unit) ? null : unit;
+			_value = value;
+			_unit = string.IsNullOrEmpty(unit) ? null : unit;
+		}
+
+		public double Value
+		{
+			get { return _value; }
+		}
+
+		public string Unit
+		{
+			get { return _unit; }
 		}
 
 		[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 		public bool Equals(CssNumeric other)
 		{
-			return this.Value == other.Value
-				&& string.Equals(this.Unit, other.Unit, StringComparison.OrdinalIgnoreCase);
+			return _value == other._value
+				&& CssEqualityComparer<string>.Default.Equals(_unit, other._unit);
 		}
 
 		public override bool Equals(object obj)
@@ -29,7 +46,16 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 
 		public override int GetHashCode()
 		{
-			return HashUtility.Hash(this.Value.GetHashCode(), this.Unit.GetHashCode());
+			return HashUtility.Hash(
+				_value.GetHashCode(),
+				CssEqualityComparer<string>.Default.GetHashCode(_unit));
+		}
+
+		public override string ToString()
+		{
+			return _unit != null
+				? string.Format(CultureInfo.InvariantCulture, "{0}{1}", _value, _unit)
+				: _value.ToString(CultureInfo.InvariantCulture);
 		}
 	}
 }

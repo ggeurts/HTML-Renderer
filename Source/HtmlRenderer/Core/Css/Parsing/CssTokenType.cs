@@ -8,7 +8,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		Undefined,
 		Whitespace = 0x100,
 		Identifier = 0x200,
-		String = 0x400,
+		QuotedString = 0x400,
 		Number = 0x800,
 		Dimension = 0x1000,
 		Percentage = 0x2000,

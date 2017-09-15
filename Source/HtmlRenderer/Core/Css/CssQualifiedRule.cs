@@ -5,7 +5,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 
 	public class CssQualifiedRule : CssRule
 	{
-		public CssQualifiedRule(ImmutableArray<CssComponent> prelude, CssBlock block)
+		public CssQualifiedRule(CssComponent prelude, CssBlock block)
 			: base(prelude, block)
 		{
 			ArgChecker.AssertArgNotNull(block, nameof(block));

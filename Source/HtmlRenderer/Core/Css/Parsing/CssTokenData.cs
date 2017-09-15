@@ -6,7 +6,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 	internal abstract class CssTokenData
 	{
 		public abstract string GetRawValue(ref CssToken token);
-		public abstract CssSimpleComponent CreateComponent(ref CssToken token);
+		public abstract CssValue CreateComponent(ref CssToken token);
 		public abstract bool Equals(ref CssToken token, ref CssToken otherToken, CssTokenData otherData);
 		public abstract int GetHashCode(ref CssToken token);
 	}
@@ -32,9 +32,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			return _input.Substring(token.Position, token.Length);
 		}
 
-		public override CssSimpleComponent CreateComponent(ref CssToken token)
+		public override CssValue CreateComponent(ref CssToken token)
 		{
-			return new CssSimpleComponent<T>(token.TokenType, _value);
+			return new CssValue<T>(token.TokenType, _value);
 		}
 
 		public override bool Equals(ref CssToken token, ref CssToken otherToken, CssTokenData otherData)
@@ -67,9 +67,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			return (char)((int)token.TokenType & 0xFF);
 		}
 
-		public override CssSimpleComponent CreateComponent(ref CssToken token)
+		public override CssValue CreateComponent(ref CssToken token)
 		{
-			return new CssSimpleComponent<char>(token.TokenType, GetValue(ref token));
+			return token.IsWhitespace
+				? CssValue.Whitespace
+				: new CssValue<char>(token.TokenType, GetValue(ref token));
 		}
 
 		public override bool Equals(ref CssToken token, ref CssToken otherToken, CssTokenData otherData)
@@ -106,9 +108,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			return _input.Substring(token.Position, token.Length);
 		}
 
-		public override CssSimpleComponent CreateComponent(ref CssToken token)
+		public override CssValue CreateComponent(ref CssToken token)
 		{
-			return new CssSimpleComponent<string>(token.TokenType, GetValue(ref token));
+			return token.IsWhitespace
+				? CssValue.Whitespace
+				: new CssValue<string>(token.TokenType, GetValue(ref token));
 		}
 
 		public override bool Equals(ref CssToken token, ref CssToken otherToken, CssTokenData otherData)

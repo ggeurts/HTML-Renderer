@@ -6,11 +6,14 @@
 	using TheArtOfDev.HtmlRenderer.Core.Css;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
+	/// <summary>
+	/// Parser CSS values into <see cref="CssNode"/> instances.
+	/// </summary>
 	public class CssParser
 	{
 		#region Static fields
 
-		private static readonly CssGrammar StylesheetGrammar = new CssGrammar();
+		private static readonly CssGrammar DefaultGrammar = new CssStylesheetGrammar();
 
 		#endregion
 
@@ -22,8 +25,8 @@
 		/// <summary>
 		/// A map of tokens to components to reduce CssSimpleComponent memory allocations
 		/// </summary>
-		private readonly Dictionary<CssToken, CssSimpleComponent> _componentTable = 
-			new Dictionary<CssToken, CssSimpleComponent>(CssToken.TokenValueComparer);
+		private readonly Dictionary<CssToken, CssValue> _componentTable = 
+			new Dictionary<CssToken, CssValue>(CssToken.TokenValueComparer);
 
 		#endregion
 
@@ -36,7 +39,7 @@
 		public CssParser(CssGrammar grammar, IEnumerable<CssToken> tokens)
 		{
 			ArgChecker.AssertArgNotNull(tokens, nameof(tokens));
-			_grammar = grammar ?? StylesheetGrammar;
+			_grammar = grammar ?? DefaultGrammar;
 			_tokenizer = tokens.GetEnumerator();
 		}
 
@@ -58,12 +61,12 @@
 		{
 			if (SkipWhiteSpace())
 			{
-				switch (_tokenizer.Current.TokenType)
+				switch (CurrentToken.TokenType)
 				{
 					case CssTokenType.AtKeyword:
-						return ConsumeAtRule();
+						return ConsumeAtRule(_grammar);
 					default:
-						return ConsumeQualifiedRule();
+						return ConsumeQualifiedRule(_grammar);
 				}
 			}
 
@@ -75,18 +78,18 @@
 		{
 			while (SkipWhiteSpace())
 			{
-				switch (_tokenizer.Current.TokenType)
+				switch (CurrentToken.TokenType)
 				{
 					case CssTokenType.CDO:
 					case CssTokenType.CDC:
 						if (isTopLevel) continue;
 						goto default;
 					case CssTokenType.AtKeyword:
-						var atRule = ConsumeAtRule();
+						var atRule = ConsumeAtRule(_grammar);
 						if (atRule != null) yield return atRule;
 						break;
 					default:
-						var rule = ConsumeQualifiedRule();
+						var rule = ConsumeQualifiedRule(_grammar);
 						if (rule != null) yield return rule;
 						// NOTE: null rule is parse error
 						break;
@@ -94,20 +97,24 @@
 			}
 		}
 
-		public IEnumerable<ICssDeclaration> ParseDeclarationList()
+		/// <summary>
+		/// Parses a list of <see cref="CssDeclaration"/> and <see cref="CssAtRule"/> instances.
+		/// </summary>
+		/// <returns>The declaration list.</returns>
+		public IEnumerable<CssNode> ParseDeclarationList()
 		{
 			while (SkipWhiteSpace())
 			{
-				switch (_tokenizer.Current.TokenType)
+				switch (CurrentToken.TokenType)
 				{
 					case CssTokenType.Semicolon:
 						continue;
 					case CssTokenType.AtKeyword:
-						var atRule = ConsumeAtRule();
+						var atRule = ConsumeAtRule(_grammar);
 						if (atRule != null) yield return atRule;
 						continue;
 					case CssTokenType.Identifier:
-						var declaration = ConsumeDeclaration(CssTokenType.Semicolon);
+						var declaration = ConsumeDeclaration(DefaultGrammar, CssTokenType.Semicolon);
 						if (declaration != null) yield return declaration;
 						continue;
 				}
@@ -119,12 +126,14 @@
 
 		public CssDeclaration ParseDeclaration()
 		{
-			return ConsumeDeclaration();
+			return SkipWhiteSpace() && CurrentToken.IsIdentifier
+				? ConsumeDeclaration(DefaultGrammar)
+				: null;
 		}
 
 		public IEnumerable<CssComponent> ParseComponentList()
 		{
-			while (SkipWhiteSpace())
+			while (MoveNext())
 			{
 				yield return ConsumeComponent();
 			}
@@ -143,86 +152,111 @@
 
 		#region Consume operations - use current token as starting point
 
-		public CssQualifiedRule ConsumeQualifiedRule()
+		/* 
+		 * NOTE: Each ConsumeXXX method consumes the token that is current as of when the 
+		 * method is called and consumes all subsequent tokens that are read from the tokenizer 
+		 * during method execution. ConsumeXXX operations must only call other ConsumeYYY 
+		 * operations and not call any ParseXXX methods.
+		 */ 
+
+		/// <summary>
+		/// Reads current token and all subsequent tokens that compose into a <see cref="CssQualifiedRule"/> instance.
+		/// </summary>
+		/// <param name="grammar"></param>
+		/// <returns></returns>
+		protected CssQualifiedRule ConsumeQualifiedRule(CssGrammar grammar)
 		{
-			var prelude = ImmutableArray.CreateBuilder<CssComponent>();
+			var preludeFragmentParser = new QualifiedRulePreludeFragmentParser(this);
+			var prelude = grammar.ConsumeQualifiedRulePrelude(preludeFragmentParser);
 
-			do
+			if (CurrentToken.TokenType == CssTokenType.LeftCurlyBracket && MoveNext())
 			{
-				if (_tokenizer.Current.TokenType == CssTokenType.LeftCurlyBracket)
-				{
-					var block = ConsumeSimpleBlock(CssBlockType.CurlyBrackets);
-					return _grammar.CreateQualifiedRule(prelude.ToImmutable(), block);
-				}
-
-				prelude.Add(ConsumeSimpleComponent());
-			} while (_tokenizer.MoveNext());
+				var blockFragmentParser = new BlockFragmentParser(this);
+				var block = grammar.ConsumeQualifiedRuleBlock(blockFragmentParser);
+				return grammar.CreateQualifiedRule(prelude, block);
+			}
 
 			// Parse error
 			return null;
 		}
 
-		public CssAtRule ConsumeAtRule()
-		{
-			var prelude = ImmutableArray.CreateBuilder<CssComponent>();
+		protected CssAtRule ConsumeAtRule(CssGrammar grammar)
+		{ 
+			var name = CurrentToken.StringValue;
+			CssComponent prelude = null;
+			CssBlock block = null;
 
-			do
+			if (MoveNext())
 			{
-				switch (_tokenizer.Current.TokenType)
+				var preludeFragmentParser = new AtRulePreludeFragmentParser(this);
+				prelude = grammar.ConsumeAtRulePrelude(name, preludeFragmentParser);
+				if (CurrentToken.TokenType == CssTokenType.LeftCurlyBracket && MoveNext())
 				{
-					case CssTokenType.Semicolon:
-						return _grammar.CreateAtRule(prelude.ToImmutable(), null);
-					case CssTokenType.LeftCurlyBracket:
-						var block = ConsumeSimpleBlock(CssBlockType.CurlyBrackets);
-						return _grammar.CreateAtRule(prelude.ToImmutable(), block);
+					var blockFragmentParser = new BlockFragmentParser(this);
+					block = grammar.ConsumeAtRuleBlock(name, blockFragmentParser);
 				}
-
-				prelude.Add(ConsumeSimpleComponent());
-			} while (_tokenizer.MoveNext());
-
-			return _grammar.CreateAtRule(prelude.ToImmutable(), null);
+			}
+			return grammar.CreateAtRule(name, prelude ?? CssComponent.Empty, block);
 		}
 
-		public CssDeclaration ConsumeDeclaration()
+		protected CssDeclaration ConsumeDeclaration(CssGrammar grammar)
 		{
-			return ConsumeDeclaration(0);
+			return ConsumeDeclaration(grammar, 0);
 		}
 
-		public CssDeclaration ConsumeDeclaration(CssTokenType delimiter)
+		protected CssDeclaration ConsumeDeclaration(CssGrammar grammar, CssTokenType endTokenType)
 		{
-			var name = _tokenizer.Current.StringValue;
-			if (!SkipWhiteSpace()) return null;										// Syntax error: unexpected EOF
-			if (_tokenizer.Current.TokenType != CssTokenType.Colon) return null;     // Parse error: expected colon
+			var name = CurrentToken.StringValue;
+			if (!SkipWhiteSpace()) return null;								// Syntax error: unexpected EOF
+			if (CurrentToken.TokenType != CssTokenType.Colon) return null;	// Parse error: expected colon
 
-			var values = ImmutableArray.CreateBuilder<CssSimpleComponent>(4);
-			while (_tokenizer.MoveNext() && _tokenizer.Current.TokenType != delimiter)
+			var values = ImmutableArray.CreateBuilder<CssValue>(4);
+			while (MoveNext() && CurrentToken.TokenType != endTokenType)
 			{
-				values.Add(ConsumeSimpleComponent());
+				values.Add(ConsumeValue());
 			}
 
-			var isImportant = TrimImportantKeyword(values);
-			return _grammar.CreateDeclaration(name, values.ToImmutable(), isImportant);
+			var isImportant = TrimTrailingImportantPhrase(values);
+			return grammar.CreateDeclaration(name, values.ToImmutable(), isImportant);
 		}
 
-		private bool TrimImportantKeyword(ImmutableArray<CssSimpleComponent>.Builder values)
+		/// <summary>
+		/// Removes any trailing !important fragment.
+		/// </summary>
+		/// <param name="values"></param>
+		/// <returns>Returns <c>true</c> if !important fragment was removed.</returns>
+		private static bool TrimTrailingImportantPhrase(ImmutableArray<CssValue>.Builder values)
 		{
-			var i = values.Count - 1;
-			while (i > 0 && values[i].IsWhitespace) i--;
+			var m = values.Count - 1;
+			int i;
 
-			if (i >= 1
-			    && values[i].HasValue("important", StringComparison.OrdinalIgnoreCase)
-			    && values[i - 1].HasValue('!'))
+			// Skip trailing whitespace
+			for (i = m; i > 0 && values[i].IsWhitespace; i--) ;
+
+			// Test for identifier "important" 
+			if (i >= 1 && values[i].HasValue("important", StringComparison.OrdinalIgnoreCase))
 			{
-				values.RemoveAt(i);
-				values.RemoveAt(i - 1);
-				return true;
+				// Skip whitespace before the "important" identifier 
+				for (i = i - 1; i >= 0 && values[i].IsWhitespace; i--) ;
+				// Test for "!" delimiter
+				if (i >= 0 && values[i].HasValue('!'))
+				{
+					// !important phrase has been found => trim the tokens that make up the phrase 
+					// (including any whitespace in or after it) from the declaration values.
+					for (var j = m; j >= i; j--)
+					{
+						values.RemoveAt(j);
+					}
+					return true;
+				}
 			}
+
 			return false;
 		}
 
-		public CssComponent ConsumeComponent()
+		protected CssComponent ConsumeComponent()
 		{
-			switch (_tokenizer.Current.TokenType)
+			switch (CurrentToken.TokenType)
 			{
 				case CssTokenType.LeftParenthesis:
 					return ConsumeSimpleBlock(CssBlockType.Parentheses);
@@ -233,14 +267,14 @@
 				case CssTokenType.Function:
 					return ConsumeFunction();
 				default:
-					return ConsumeSimpleComponent();
+					return ConsumeValue();
 			}
 		}
 
 		protected CssBlock ConsumeSimpleBlock(CssBlockType blockType)
 		{
 			var components = ImmutableList.CreateBuilder<CssComponent>();
-			while (_tokenizer.MoveNext() && _tokenizer.Current.TokenType != blockType.EndTokenType)
+			while (MoveNext() && CurrentToken.TokenType != blockType.EndTokenType)
 			{
 				components.Add(ConsumeComponent());
 			}
@@ -249,10 +283,10 @@
 
 		protected CssFunction ConsumeFunction()
 		{
-			var name = _tokenizer.Current.StringValue;
+			var name = CurrentToken.StringValue;
 
 			var components = ImmutableArray.CreateBuilder<CssComponent>();
-			while (_tokenizer.MoveNext() && _tokenizer.Current.TokenType != CssTokenType.RightParenthesis)
+			while (MoveNext() && CurrentToken.TokenType != CssTokenType.RightParenthesis)
 			{
 				components.Add(ConsumeComponent());
 			}
@@ -260,13 +294,13 @@
 			return _grammar.CreateFunction(name, components.ToImmutable());
 		}
 
-		protected CssSimpleComponent ConsumeSimpleComponent()
+		protected CssValue ConsumeValue()
 		{
-			CssSimpleComponent result;
-			if (!_componentTable.TryGetValue(_tokenizer.Current, out result))
+			CssValue result;
+			if (!_componentTable.TryGetValue(CurrentToken, out result))
 			{
-				result = _tokenizer.Current.CreateComponent();
-				_componentTable.Add(_tokenizer.Current, result);
+				result = CurrentToken.CreateComponent();
+				_componentTable.Add(CurrentToken, result);
 			}
 			return result;
 		}
@@ -275,22 +309,161 @@
 
 		#region Utility methods
 
+		protected CssToken CurrentToken
+		{
+			get { return _tokenizer.Current; }
+		}
+
+		protected bool MoveNext()
+		{
+			return _tokenizer.MoveNext();
+		}
+
 		protected bool SkipWhiteSpace()
 		{
-			while (_tokenizer.MoveNext())
+			while (MoveNext())
 			{
-				if (!_tokenizer.Current.IsWhitespace) return true;
+				if (!CurrentToken.IsWhitespace) return true;
 			}
 			return false;
 		}
 
 		protected bool SkipUntil(CssTokenType tokenType)
 		{
-			while (_tokenizer.MoveNext())
+			while (MoveNext())
 			{
-				if (_tokenizer.Current.TokenType == tokenType) return true;
+				if (CurrentToken.TokenType == tokenType) return true;
 			}
 			return false;
+		}
+
+		#endregion
+
+		#region Inner classes
+
+		public abstract class FragmentParser
+		{
+			private readonly CssParser _parser;
+			private int _state;
+
+			internal FragmentParser(CssParser parser)
+			{
+				_parser = parser;
+			}
+
+			public CssToken CurrentToken
+			{
+				get { return _parser._tokenizer.Current; }
+			}
+
+			public bool IsEof
+			{
+				get { return _state >= 2; }
+			}
+
+			public bool MoveNext()
+			{
+				var tokenizer = _parser._tokenizer;
+				if (_state == 0)
+				{
+					if (IsEndToken(tokenizer.Current.TokenType))
+					{
+						_state = 2;
+						return false;
+					}
+					_state = 1;
+				}
+				else if (_state == 1)
+				{
+					if (!tokenizer.MoveNext() || IsEndToken(tokenizer.Current.TokenType))
+					{
+						_state = 2;
+					}
+				}
+				return _state < 2;
+			}
+
+			public CssQualifiedRule ConsumeQualifiedRule(CssGrammar grammar)
+			{
+				return _parser.ConsumeQualifiedRule(grammar);
+			}
+
+			public CssAtRule ConsumeAtRule(CssGrammar grammar)
+			{
+				return _parser.ConsumeAtRule(grammar);
+			}
+
+			public CssDeclaration ConsumeDeclaration(CssGrammar grammar)
+			{
+				return _parser.ConsumeDeclaration(grammar, CssTokenType.Semicolon);
+			}
+
+			public CssComponent ConsumeComponent()
+			{
+				return _parser.ConsumeValue();
+			}
+
+			public CssBlock ConsumeSimpleBlock(CssBlockType blockType)
+			{
+				return _parser.ConsumeSimpleBlock(blockType);
+			}
+
+			public CssValue ConsumeValue()
+			{
+				return _parser.ConsumeValue();
+			}
+
+			protected abstract bool IsEndToken(CssTokenType tokenType);
+		}
+
+		private class QualifiedRulePreludeFragmentParser : FragmentParser
+		{
+			public QualifiedRulePreludeFragmentParser(CssParser parser) 
+				: base(parser)
+			{}
+
+			protected override bool IsEndToken(CssTokenType tokenType)
+			{
+				return tokenType == 0 
+					|| tokenType == CssTokenType.LeftCurlyBracket;
+			}
+		}
+
+		private class AtRulePreludeFragmentParser : FragmentParser
+		{
+			public AtRulePreludeFragmentParser(CssParser parser)
+				: base(parser)
+			{ }
+
+			protected override bool IsEndToken(CssTokenType tokenType)
+			{
+				return tokenType == 0
+				    || tokenType == CssTokenType.LeftCurlyBracket
+					|| tokenType == CssTokenType.Semicolon;
+			}
+		}
+
+		private class BlockFragmentParser : FragmentParser
+		{
+			private int _nestLevel = 1;
+
+			public BlockFragmentParser(CssParser parser) 
+				: base(parser)
+			{}
+
+			protected override bool IsEndToken(CssTokenType tokenType)
+			{
+				switch (tokenType)
+				{
+					case CssTokenType.LeftCurlyBracket:
+						_nestLevel++;
+						break;
+					case CssTokenType.RightCurlyBracket:
+						_nestLevel--;
+						return _nestLevel <= 0;
+				}
+				return false;
+			}
 		}
 
 		#endregion

@@ -3,7 +3,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 	using System.Text;
 	using TheArtOfDev.HtmlRenderer.Core.Css.Parsing;
 
-	public class CssBlockType
+	public sealed class CssBlockType
 	{
 		public static readonly CssBlockType Parentheses = new CssBlockType('(', ')');
 		public static readonly CssBlockType SquareBrackets = new CssBlockType('[', ']');
@@ -12,9 +12,15 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 		public readonly char BeginChar;
 		public readonly char EndChar;
 
+		private CssBlockType(char beginChar, char endChar)
+		{
+			this.BeginChar = beginChar;
+			this.EndChar = endChar;
+		}
+
 		public CssTokenType BeginTokenType
 		{
-			get { return (CssTokenType) this.BeginChar; }
+			get { return (CssTokenType)this.BeginChar; }
 		}
 
 		public CssTokenType EndTokenType
@@ -22,10 +28,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 			get { return (CssTokenType)this.EndChar; }
 		}
 
-		private CssBlockType(char beginChar, char endChar)
+		public override int GetHashCode()
 		{
-			this.BeginChar = beginChar;
-			this.EndChar = endChar;
+			return this.BeginChar.GetHashCode();
 		}
 
 		public override string ToString()

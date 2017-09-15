@@ -1,6 +1,7 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css
 {
 	using System;
+	using System.Globalization;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public struct CssUnicodeRange : IEquatable<CssUnicodeRange>
@@ -29,6 +30,13 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 		public override int GetHashCode()
 		{
 			return HashUtility.Hash(this.RangeStart, this.RangeEnd);
+		}
+
+		public override string ToString()
+		{
+			return this.RangeStart == this.RangeEnd
+				? this.RangeStart.ToString("X6")
+				: string.Format(CultureInfo.InvariantCulture, "{0:X6}-{1:X6}", this.RangeStart, this.RangeEnd);
 		}
 	}
 }
