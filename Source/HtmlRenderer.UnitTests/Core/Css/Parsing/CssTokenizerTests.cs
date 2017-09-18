@@ -6,6 +6,7 @@
 	using TheArtOfDev.HtmlRenderer.Core.Css.Parsing;
 
 	[TestFixture]
+	//[Timeout(100)]
 	public class CssTokenizerTests
 	{
 		#region Static fields
@@ -172,6 +173,8 @@
 		[TestCase("+2pt", 2, "pt")]
 		[TestCase("-987654mm", -987654, "mm")]
 		[TestCase("1q", 1, "q")]
+		[TestCase("10e", 10, "e")]
+		[TestCase("-9E", -9, "E")]
 		public void TokenizeIntegerDimensionToken(string css, double expectedValue, string expectedUnit)
 		{
 			VerifyTokenizer(css, DimensionLiteral(expectedValue, expectedUnit));
@@ -270,7 +273,6 @@
 		[TestCase("\\57eb", "\u57EB")]
 		[TestCase("NO\\57", "NOW")]
 		[TestCase("NO\\57 ", "NOW")]
-		[TestCase("\\57eb", "\u57EB")]
 		[TestCase("-\\6E", "-n")]
 		[TestCase("-\\6E op", "-nop")]
 		[TestCase("-\\6Eop", "-nop")]
@@ -456,7 +458,7 @@
 						break;
 					case CssTokenType.MatchOperator:
 						Assert.That(token.IsMatchOperator, Is.True, "[Token {0}]IsMatchOperator", tokenIndex);
-						Assert.That(token.RawValue, Is.EqualTo((char)expectedToken.Value + "="), "[Token {0}]RawValue", tokenIndex);
+						Assert.That(token.StringValue, Is.EqualTo((char)expectedToken.Value + "="), "[Token {0}]RawValue", tokenIndex);
 						break;
 					case CssTokenType.UnicodeRange:
 						Assert.That(token.UnicodeRangeValue, Is.EqualTo((CssUnicodeRange)expectedToken.Value), "[Token {0}]UnicodeRangeValue", tokenIndex);

@@ -48,10 +48,13 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Core\Css\CssCharEqualityComparer.cs" />
+    <Compile Include="Core\Css\CssCharExtensions.cs" />
     <Compile Include="Core\Css\CssEqualityComparer.cs" />
     <Compile Include="Core\Css\CssNode.cs" />
     <Compile Include="Core\Css\CssValue.cs" />
+    <Compile Include="Core\Css\Parsing\CssError.cs" />
     <Compile Include="Core\Css\Parsing\CssGrammar.cs" />
+    <Compile Include="Core\Css\Parsing\CssReader.cs" />
     <Compile Include="Core\Css\Parsing\CssStylesheetGrammar.cs" />
     <Compile Include="Core\Entities\CssPageRuleCollection.cs" />
     <Compile Include="Core\Entities\CssBlockCollection.cs" />

@@ -3,6 +3,7 @@
 	using System;
 	using System.Collections.Generic;
 	using System.Globalization;
+	using System.IO;
 	using System.Linq;
 	using System.Text;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
@@ -12,60 +13,50 @@
 		private const int MAX_CODE_POINT = 0x10FFFF;
 		private const char REPLACEMENT_CHAR = (char)0xFFFD;
 
-		private readonly string _input;
-		private readonly int _start;
-		private readonly int _eof;
+		private readonly CssReader _reader;
 		private readonly CssTokenFactory _factory;
 		private readonly StringBuilder _valueBuilder = new StringBuilder();
+		private int _lineCount;
+		private int _linePos;
 
-		private CssTokenizer(string input, int start, int count)
+		public EventHandler<CssErrorEventArgs> ParseError = delegate {};
+
+		private CssTokenizer(CssReader reader)
 		{
-			ArgChecker.AssertArgNotNull(input, nameof(input));
-			if (start < 0 || start > input.Length)
-			{
-				throw new ArgumentOutOfRangeException(nameof(start), "start must be greater than or equal to 0 and less than or equal to input length");
-			}
-			if (count < 0 || count + start > input.Length)
-			{
-				throw new ArgumentOutOfRangeException(nameof(count), "count must be greater than or equal to 0 and count + index must be less than or equal to input length");
-			}
-
-			_input = input;
-			_factory = new CssTokenFactory(input);
-			_start = start;
-			_eof = start + count;
+			ArgChecker.AssertArgNotNull(reader, nameof(reader));
+			_reader = reader;
+			_factory = new CssTokenFactory();
 		}
 
 		public static IEnumerable<CssToken> Tokenize(string input)
 		{
 			return input != null 
-				? new CssTokenizer(input, 0, input.Length).Tokenize()
+				? new CssTokenizer(new CssReader(new StringReader(input))).Tokenize()
 				: Enumerable.Empty<CssToken>();
 		}
 
-		public static IEnumerable<CssToken> Tokenize(string input, int start, int count)
-		{
-			return new CssTokenizer(input, start, count).Tokenize();
-		}
+		//public static IEnumerable<CssToken> Tokenize(string input, int start, int count)
+		//{
+		//	return new CssTokenizer(new CssReader(new StringReader(input))).Tokenize();
+		//}
 
 		private IEnumerable<CssToken> Tokenize()
 		{
 			CssToken token = default(CssToken);
 
-			if (_start >= _eof) yield break;
-
-			var i = _start;
-			while (i < _eof)
+			int ch;
+			while ((ch = _reader.Peek()) >= 0)
 			{
-				if (TryConsumeWhitespaceToken(ref i, ref token))
-				{
-					yield return token;
-					if (i >= _eof) break;
-				}
-
-				var ch = _input[i];
 				switch (ch)
 				{
+					case ' ':
+					case '\t':
+					case '\f':
+					case '\r':
+					case '\n':
+						yield return ConsumeWhitespaceToken();
+						continue;
+
 					case ',':
 					case ':':
 					case ';':
@@ -75,523 +66,524 @@
 					case ')':
 					case ']':
 					case '}':
-						yield return _factory.CreateToken(i++);
-						break;
+						yield return _factory.CreateToken((char)_reader.Read());
+						continue;
 
 					case '\'':
 					case '"':
-						yield return ConsumeStringToken(ref i);
-						break;
+						yield return ConsumeStringToken();
+						continue;
 
 					case '#':
-						yield return ConsumeHashToken(ref i);
-						break;
+						_reader.Read();
+
+						string hashNameOrIdentifier;
+						if (TryConsumeIdentifier(out hashNameOrIdentifier))
+						{
+							yield return _factory.CreateHashToken(hashNameOrIdentifier, true);
+						}
+						else if (TryConsumeName(out hashNameOrIdentifier))
+						{
+							yield return _factory.CreateHashToken(hashNameOrIdentifier, false);
+						}
+						else
+						{
+							yield return _factory.CreateToken((char)ch);
+						}
+						continue;
 
 					case '^':
 					case '$':
 					case '*':
 					case '~':
-						if (i < _eof - 1 && _input[i+1] == '=')
-						{
-							yield return _factory.CreateOperatorToken(i);
-							i += 2;
-							break;
-						}
-						yield return _factory.CreateToken(i++);
-						break;
+						_reader.Read();
+						yield return _reader.TryRead("=") 
+							? _factory.CreateOperatorToken((char) ch) 
+							: _factory.CreateToken((char) ch);
+						continue;
 
 					case '+':
 					case '.':
-						if (TryConsumeNumericToken(ref i, ref token))
+						if (TryConsumeNumericToken(ref token))
 						{
 							yield return token;
-							break;
+							continue;
 						}
-						yield return _factory.CreateToken(i++);
-						break;
+
+						yield return _factory.CreateToken((char) _reader.Read());
+						continue;
 
 					case '-':
-						if (TryConsumeNumericToken(ref i, ref token) || TryConsumeIdentifierToken(ref i, ref token))
+						if (TryConsumeNumericToken(ref token) || TryConsumeIdentifierToken(ref token))
 						{
 							yield return token;
-							break;
+							continue;
 						}
-						if (i < _eof - 2 && _input[i+1] == '-' && _input[i+2] == '>')
-						{
-							yield return _factory.CreateCdcToken(i);
-							i += 3;
-							break;
-						}
-						yield return _factory.CreateToken(i++);
-						break;
+
+						yield return _reader.TryRead("-->")
+							? _factory.CreateCdcToken()
+							: _factory.CreateToken((char) _reader.Read());
+						continue;
 
 					case '/':
-						if (!TryConsumeComment(ref i))
+						string comment;
+						if (!TryConsumeComment(out comment))
 						{
-							yield return _factory.CreateToken(i++);
+							yield return _factory.CreateToken((char)_reader.Read());
 						}
-						break;
+						continue;
 
 					case '<':
-						if (i < _eof - 2 && _input[i + 1] == '-' && _input[i + 2] == '-')
-						{
-							yield return _factory.CreateCdoToken(i);
-							i += 3;
-							break;
-						}
-						yield return _factory.CreateToken(i++);
-						break;
+						yield return _reader.TryRead("<!--") 
+							? _factory.CreateCdoToken() 
+							: _factory.CreateToken((char)_reader.Read());
+						continue;
 
 					case '@':
-						var atStart = i++;
+						_reader.Read();
+
 						string identifier;
-						if (TryConsumeIdentifier(ref i, out identifier))
-						{
-							yield return _factory.CreateAtKeywordToken(atStart, i - atStart, identifier);
-							break;
-						}
-						yield return _factory.CreateToken(atStart);
-						break;
+						yield return TryConsumeIdentifier(out identifier)
+							? _factory.CreateAtKeywordToken(identifier)
+							: _factory.CreateToken((char) ch);
+						continue;
 
 					case '\\':
-						if (TryConsumeIdentifierToken(ref i, ref token))
+						if (TryConsumeIdentifierToken(ref token))
 						{
 							yield return token;
-							break;
+							continue;
 						}
 
-						// Parse error
-						yield return _factory.CreateToken(i++);
-						break;
+						NotifyError("Invalid escape sequence.");
+
+						yield return _factory.CreateToken((char) _reader.Read());
+						continue;
 
 					case '|':
-						if (i < _eof - 1)
+						_reader.Read();
+						switch (_reader.Peek())
 						{
-							if (_input[i + 1] == '=')
-							{
-								yield return _factory.CreateOperatorToken(i);
-								i += 2;
+							case '=':
+								yield return _factory.CreateOperatorToken((char) ch);
+								_reader.Read();
 								break;
-							}
-							if (_input[i + 1] == '|')
-							{
-								yield return _factory.CreateColumnToken(i);
-								i += 2;
+							case '|':
+								yield return _factory.CreateColumnToken();
+								_reader.Read();
 								break;
-							}
+							default:
+								yield return _factory.CreateToken((char) ch);
+								break;
 						}
-						yield return _factory.CreateToken(i++);
-						break;
+						continue;
 
 					case 'u':
 					case 'U':
-						if (TryConsumeUnicodeRangeToken(ref i, ref token))
+						if (_reader.Peek(1) == '+' && ((ch = _reader.Peek(2)) == '?' || IsHexDigit(ch)))
 						{
-							yield return token;
-							break;
+							_reader.Read();
+							_reader.Read();
+							yield return ConsumeUnicodeRangeToken();
 						}
-						yield return ConsumeIdentifierLikeToken(ref i);
-						break;
+						else
+						{
+							yield return ConsumeIdentifierLikeToken();
+						}
+						continue;
 
 					default:
-						if (IsDigit(_input[i]))
+						if (TryConsumeNumericToken(ref token))
 						{
-							TryConsumeNumericToken(ref i, ref token);
 							yield return token;
-							break;
+							continue;
 						}
-						if (IsNameStartCodePoint(_input[i]))
+						if (IsNameStartCodePoint((char) ch))
 						{
-							yield return ConsumeIdentifierLikeToken(ref i);
-							break;
+							yield return ConsumeIdentifierLikeToken();
+							continue;
 						}
 
-						yield return _factory.CreateToken(i++);
-						break;
+						yield return _factory.CreateToken((char)_reader.Read());
+						continue;
 				}
 			}
 		}
 
-		private CssToken ConsumeHashToken(ref int i)
+		private CssToken ConsumeIdentifierLikeToken()
 		{
-			var tokenStart = i++;
 			_valueBuilder.Length = 0;
-
-			// Try to consume name, otherwise return # as delimiter
-			string identifier;
-			if (TryConsumeIdentifier(ref i, out identifier))
-			{
-				return _factory.CreateHashToken(tokenStart, i - tokenStart, identifier, true);
-			}
-
-			string name;
-			if (TryConsumeName(ref i, out name))
-			{
-				return _factory.CreateHashToken(tokenStart, i - tokenStart, name, false);
-			}
-
-			return _factory.CreateToken(tokenStart);
-		}
-
-		private CssToken ConsumeIdentifierLikeToken(ref int i)
-		{
-			var tokenStart = i;
-			_valueBuilder.Length = 0;
-			_valueBuilder.Append(_input[i++]);
-			TryConsumeName(ref i, _valueBuilder);
+			_valueBuilder.Append((char)_reader.Read());
+			TryConsumeName(_valueBuilder);
 
 			var name = BuildValue();
-			if (i < _eof && _input[i] == '(')
+			if (_reader.Peek() == '(')
 			{
-				i++;
+				_reader.Read();
 				if (name.Equals("url", StringComparison.OrdinalIgnoreCase))
 				{
 					bool isInvalid;
-					var url = ConsumeUrl(ref i, out isInvalid);
-					return _factory.CreateUrlToken(tokenStart, i - tokenStart, url, isInvalid);
+					var url = ConsumeUrl(out isInvalid);
+					return _factory.CreateUrlToken(url, isInvalid);
 				}
-				return _factory.CreateFunctionToken(tokenStart, i - tokenStart, name);
+				return _factory.CreateFunctionToken(name);
 			}
-			return _factory.CreateIdentifierToken(tokenStart, i - tokenStart, name);
+			return _factory.CreateIdentifierToken(name);
 		}
 
-		private CssToken ConsumeStringToken(ref int i)
+		private CssToken ConsumeStringToken()
 		{
-			var tokenStart = i;
 			_valueBuilder.Length = 0;
 
 			// Consume leading string delimiter
-			var delimiter = _input[i++];
+			var delimiter = _reader.Read();
+			var isComplete = false;
 
-			char ch;
-			while (i < _eof && (ch = _input[i]) != delimiter)
+			int ch;
+			while ((ch = _reader.Peek()) >= 0 && !isComplete)
 			{
 				switch (ch)
 				{
 					case '\n':
 					case '\r':
 					case '\f':
-						// Bad string token
-						return _factory.CreateStringToken(tokenStart, i - tokenStart, BuildValue(), true);
-					case '\\':
-						// Escaped code point
-						i++;
-						if (i >= _eof || TryConsumeNewline(ref i)) continue;
+						NotifyError("Unescaped newline character in quoted string literal.");
+						return _factory.CreateStringToken(BuildValue(), true);
 
-						ConsumeEscapedCodePoint(ref i, _valueBuilder);
-						break;
+					case '\\':
+						var ch1 = _reader.Peek(1);
+						if (IsNewLine(ch1))
+						{
+							_reader.Read();
+							TryConsumeNewline();
+							break;
+						}
+						if (IsValidEscape(ch, ch1))
+						{
+							_reader.Read();
+							ConsumeEscapedCodePoint(_valueBuilder);
+							break;
+						}
+						goto default;
+
 					default:
-						_valueBuilder.Append(ch);
-						i++;
+						_reader.Read();
+						if (ch != delimiter)
+						{
+							_valueBuilder.Append((char) ch);
+						}
+						else
+						{
+							isComplete = true;
+						}
 						break;
 				}
 			}
 
-			i++;
-			return _factory.CreateStringToken(tokenStart, i - tokenStart, BuildValue(), false);
+			return _factory.CreateStringToken(BuildValue(), false);
 		}
 
-		private string ConsumeUrl(ref int i, out bool isInvalid)
+		private string ConsumeUrl(out bool isInvalid)
 		{
-			while (TryConsumeWhitespace(ref i)) {}
-			if (i >= _eof)
+			while (TryConsumeWhitespace()) {}
+
+			var ch = _reader.Peek();
+			if (ch < 0)
 			{
 				isInvalid = false;
 				return null;
 			}
 
-			switch (_input[i])
+			// Handle quoted string values
+			switch (ch)
 			{
 				case '\'':
 				case '"':
-					var stringToken = ConsumeStringToken(ref i);
+					var stringToken = ConsumeStringToken();
 					if (!stringToken.IsInvalid)
 					{
-						while (TryConsumeWhitespace(ref i)) { }
-						if (i >= _eof || _input[i] == ')')
+						while (TryConsumeWhitespace()) { }
+
+						if (_reader.Peek() == ')')
 						{
-							i++;
+							_reader.Read();
 							isInvalid = false;
 							return stringToken.StringValue;
 						}
 					}
 
-					ConsumeBadUrlRemnants(ref i);
+					ConsumeBadUrlRemnants();
 					isInvalid = true;
 					return stringToken.StringValue;
-			}
 
-			_valueBuilder.Length = 0;
-			isInvalid = false;
-			do
-			{
-				var ch = _input[i];
-				switch (_input[i])
-				{
-					case ')':
-						i++;
-						return BuildValue();
-					case '\'':
-					case '"':
-					case '(':
-						// Parse error
-						isInvalid = true;
-						break;
-					case '\\':
-						if (IsValidEscape(i))
+				default:
+					_valueBuilder.Length = 0;
+					do
+					{
+						switch (ch)
 						{
-							i++;
-							ConsumeEscapedCodePoint(ref i, _valueBuilder);
-							break;
+							case ')':
+								_reader.Read();
+								isInvalid = false;
+								return BuildValue();
+
+							case '\'':
+							case '"':
+							case '(':
+								NotifyError("Unexpected '(' character in url literal");
+								ConsumeBadUrlRemnants();
+								isInvalid = true;
+								return BuildValue();
+
+							case '\\':
+								_reader.Read();
+								if (IsValidEscape(ch, _reader.Peek()))
+								{
+									ConsumeEscapedCodePoint(_valueBuilder);
+								}
+								else
+								{
+									NotifyError("Invalid escape sequence in url literal");
+									ConsumeBadUrlRemnants();
+									isInvalid = true;
+									return BuildValue();
+								}
+								break;
+
+							default:
+								if (IsNonPrintable(ch))
+								{
+									NotifyError("Non-printable character in url literal");
+									ConsumeBadUrlRemnants();
+									isInvalid = true;
+									return BuildValue();
+								}
+
+								_valueBuilder.Append((char)_reader.Read());
+								break;
 						}
+						while (TryConsumeWhitespace()) { }
 
-						// Parse error
-						isInvalid = true;
-						break;
-					default:
-						_valueBuilder.Append(ch);
-						i++;
-						break;
+						ch = _reader.Peek();
+					} while (ch >= 0);
 
-				}
-				while (TryConsumeWhitespace(ref i)) { }
-			} while (!isInvalid && i < _eof);
-
-			if (isInvalid) ConsumeBadUrlRemnants(ref i);
-			return BuildValue();
+					isInvalid = false;
+					return BuildValue();
+			}
 		}
 
-		private void ConsumeBadUrlRemnants(ref int i)
+		private void ConsumeBadUrlRemnants()
 		{
-			while (i < _eof)
+			int ch;
+			while ((ch = _reader.Peek()) >= 0)
 			{
-				switch (_input[i])
+				switch (ch)
 				{
 					case ')':
 						return;
 					case '\\':
-						if (IsValidEscape(i))
-						{
-							i++;
-							ConsumeEscapedCodePoint(ref i, null);
-						}
+						_reader.Read();
+						ConsumeEscapedCodePoint(null);
 						break;
 					default:
-						i++;
+						_reader.Read();
 						break;
 				}
 			}
 		}
 
-		private bool TryConsumeIdentifierToken(ref int i, ref CssToken result)
+		private bool TryConsumeIdentifierToken(ref CssToken result)
 		{
-			var tokenStart = i;
-
 			string identifier;
-			if (!TryConsumeIdentifier(ref i, out identifier)) return false;
+			if (!TryConsumeIdentifier(out identifier)) return false;
 
-			result = _factory.CreateIdentifierToken(tokenStart, i - tokenStart, identifier);
+			result = _factory.CreateIdentifierToken(identifier);
 			return true;
 		}
 
-		private bool TryConsumeNumericToken(ref int i, ref CssToken result)
+		private bool TryConsumeNumericToken(ref CssToken result)
 		{
-			var tokenStart = i;
+			_valueBuilder.Length = 0;
 
 			bool isFloatingPoint;
-			if (!TryConsumeNumber(ref i, out isFloatingPoint)) return false;
+			if (!TryConsumeNumber(_valueBuilder, out isFloatingPoint)) return false;
 
-			var value = double.Parse(_input.Substring(tokenStart, i - tokenStart), CultureInfo.InvariantCulture);
+			var value = double.Parse(BuildValue(), CultureInfo.InvariantCulture);
 
-			if (i < _eof)
+			if (_reader.TryRead("%"))
 			{
-				_valueBuilder.Length = 0;
-				if (_input[i] == '%')
-				{
-					i++;
-					result = _factory.CreateNumericToken(tokenStart, i - tokenStart, isFloatingPoint, value, "%");
-					return true;
-				}
-
-				string identifier;
-				if (TryConsumeIdentifier(ref i, out identifier))
-				{
-					result = _factory.CreateNumericToken(tokenStart, i - tokenStart, isFloatingPoint, value, identifier);
-					return true;
-				}
+				result = _factory.CreateNumericToken(isFloatingPoint, value, "%");
+				return true;
 			}
 
-			result = _factory.CreateNumericToken(tokenStart, i - tokenStart, isFloatingPoint, value, null);
+			string identifier;
+			if (TryConsumeIdentifier(out identifier))
+			{
+				result = _factory.CreateNumericToken(isFloatingPoint, value, identifier);
+				return true;
+			}
+
+			result = _factory.CreateNumericToken(isFloatingPoint, value, null);
 			return true;
 		}
 
-		private bool TryConsumeUnicodeRangeToken(ref int i, ref CssToken result)
+		private CssToken ConsumeUnicodeRangeToken()
 		{
-			if (i >= _eof - 2 || _input[i + 1] != '+' || !(_input[i + 2] == '?' || IsHexDigit(_input[i + 2]))) return false;
+			var ch = _reader.Peek();
 
-			var tokenStart = i;
-			i += 2;
-
-			var hexStart = i;
-			var hexLength = 0;
-			while (i < _eof && hexLength < 6 && IsHexDigit(_input[i]))
+			_valueBuilder.Length = 0;
+			while (_valueBuilder.Length < 6 && IsHexDigit(ch))
 			{
-				i++;
-				hexLength++;
+				_valueBuilder.Append((char)_reader.Read());
+				ch = _reader.Peek();
 			}
 
 			int rangeStart, rangeEnd;
-			if (i < _eof && hexLength < 6 && _input[i] == '?')
+			if (_valueBuilder.Length < 6 && ch == '?')
 			{
-				i++;
-				hexLength++;
-				while (i < _eof && hexLength < 6 && _input[i] == '?')
+				do
 				{
-					i++;
-					hexLength++;
-				}
-				var hexNumber = _input.Substring(hexStart, hexLength);
+					_valueBuilder.Append((char) _reader.Read());
+					ch = _reader.Peek();
+				} while (_valueBuilder.Length < 6 && ch == '?');
+
+				var hexNumber = BuildValue();
 				rangeStart = int.Parse(hexNumber.Replace('?', '0'), NumberStyles.AllowHexSpecifier);
 				rangeEnd = int.Parse(hexNumber.Replace('?', 'F'), NumberStyles.AllowHexSpecifier);
 			}
 			else
 			{
-				rangeStart = rangeEnd = int.Parse(_input.Substring(hexStart, hexLength), NumberStyles.AllowHexSpecifier);
+				rangeStart = rangeEnd = int.Parse(BuildValue(), NumberStyles.AllowHexSpecifier);
 			}
 
-			if (i < _eof - 1 && _input[i] == '-' && IsHexDigit(_input[i + 1]))
+			if (ch == '-' && IsHexDigit(_reader.Peek(1)))
 			{
-				hexStart = ++i;
-				hexLength = 0;
-				while (i < _eof && hexLength < 6 && IsHexDigit(_input[i]))
+				_reader.Read();
+				_valueBuilder.Length = 0;
+				do
 				{
-					i++;
-					hexLength++;
-				}
-				var hexNumber = _input.Substring(hexStart, hexLength);
+					_valueBuilder.Append((char)_reader.Read());
+					ch = _reader.Peek();
+				} while (_valueBuilder.Length < 6 && IsHexDigit(ch));
+
+				var hexNumber = BuildValue();
 				rangeEnd = int.Parse(hexNumber, NumberStyles.AllowHexSpecifier);
 			}
 
-			result = _factory.CreateUnicodeRangeToken(tokenStart, i - tokenStart, rangeStart, rangeEnd);
+			return _factory.CreateUnicodeRangeToken(rangeStart, rangeEnd);
+		}
+
+		private CssToken ConsumeWhitespaceToken()
+		{
+			while (TryConsumeWhitespace()) {}
+			return _factory.CreateWhitespaceToken();
+		}
+
+		private bool TryConsumeComment(out string comment)
+		{
+			if (!_reader.TryRead("/*"))
+			{
+				comment = null;
+				return false;
+			}
+
+			_reader.Read();
+			var ch =_reader.Read();
+			while (ch >= 0 && ch != '*' && _reader.Peek(1) != '/')
+			{
+				_valueBuilder.Append((char) ch);
+				ch = _reader.Read();
+			}
+			_reader.Read();
+			_reader.Read();
+
+			comment = BuildValue();
 			return true;
 		}
 
-		private bool TryConsumeWhitespaceToken(ref int i, ref CssToken result)
+		private bool TryConsumeWhitespace()
 		{
-			var tokenStart = i;
-			while (TryConsumeWhitespace(ref i)) {}
-
-			if (i > tokenStart)
-			{
-				result = _factory.CreateWhitespaceToken(tokenStart, i - tokenStart);
-				return true;
-			}
-			return false;
-		}
-
-		private bool TryConsumeComment(ref int i)
-		{
-			if (i > _eof - 2) return false;
-			if (_input[i] != '/' && _input[i + 1] != '*') return false;
-
-			i += 2;
-			while (i < _eof - 2 && (_input[i] != '*' || _input[i + 1] != '/'))
-			{
-				i++;
-			}
-			i += 2;
-
-			return true;
-		}
-
-		private bool TryConsumeWhitespace(ref int i)
-		{
-			if (i >= _eof) return false;
-
-			switch (_input[i])
+			switch (_reader.Peek())
 			{
 				case '\t':
 				case ' ':
-					i++;
+					_reader.Read();
 					return true;
 				default:
-					return TryConsumeNewline(ref i);
+					return TryConsumeNewline();
 			}
 		}
 
-		private bool TryConsumeNewline(ref int i)
+		private bool TryConsumeNewline()
 		{
-			if (i >= _eof) return false;
-
-			switch (_input[i])
+			switch (_reader.Peek())
 			{
 				case '\n':
+					_reader.Read();
+					_lineCount++;
+					_linePos = _reader.Position;
+					return true;
 				case '\f':
 				case ' ':
-					i++;
+					_reader.Read();
 					return true;
 				case '\r':
-					i++;
-					if (i < _eof && _input[i] == '\n') i++;
+					_reader.Read();
+					if (_reader.Peek() == '\n') _reader.Read();
+					_lineCount++;
+					_linePos = _reader.Position;
 					return true;
 				default:
 					return false;
 			}
 		}
 
-		private bool TryConsumeIdentifier(ref int i, out string result)
+		private bool TryConsumeIdentifier(out string result)
 		{
 			_valueBuilder.Length = 0;
-			if (!TryConsumeIdentifierStart(ref i, _valueBuilder))
+			if (!TryConsumeIdentifierStart(_valueBuilder))
 			{
 				result = null;
 				return false;
 			}
 
 			// Consume any remainder of identifier
-			TryConsumeName(ref i, _valueBuilder);
+			TryConsumeName(_valueBuilder);
 
 			result = BuildValue();
 			return true;
 		}
 
-		private bool TryConsumeIdentifierStart(ref int i, StringBuilder valueBuilder)
+		private bool TryConsumeIdentifierStart(StringBuilder valueBuilder)
 		{
-			if (i >= _eof) return false;
-
-			var oldValueLength = valueBuilder.Length;
-			var j = i;
-			var ch = _input[j++];
-
+			var ch = _reader.Peek();
+			var lookaheadIndex = 1;
 			if (ch == '-')
 			{
-				if (j >= _eof) return false;
-				valueBuilder.Append(ch);
-				ch = _input[j++];
+				ch = _reader.Peek(lookaheadIndex++);
 			}
 
 			if (IsNameStartCodePoint(ch))
 			{
-				valueBuilder.Append(ch);
-				i = j;
+				_reader.Read(valueBuilder, lookaheadIndex);
 				return true;
 			}
 
-			if (IsValidEscape(j-1))
+			if (IsValidEscape(ch, _reader.Peek(lookaheadIndex)))
 			{
-				ConsumeEscapedCodePoint(ref j, valueBuilder);
-				i = j;
+				_reader.Read(valueBuilder, lookaheadIndex);
+				valueBuilder.Length--;
+				ConsumeEscapedCodePoint(valueBuilder);
 				return true;
 			}
 
-			valueBuilder.Length = oldValueLength;
 			return false;
 		}
 
-		private bool TryConsumeName(ref int i, out string result)
+		private bool TryConsumeName(out string result)
 		{
 			_valueBuilder.Length = 0;
-			if (TryConsumeName(ref i, _valueBuilder))
+			if (TryConsumeName(_valueBuilder))
 			{
 				result = BuildValue();
 				return true;
@@ -601,22 +593,21 @@
 			return false;
 		}
 
-		private bool TryConsumeName(ref int i, StringBuilder valueBuilder)
+		private bool TryConsumeName(StringBuilder valueBuilder)
 		{
-			var nameStart = i;
+			var namePosition = _reader.Position;
 
-			while (i < _eof)
+			int ch;
+			while ((ch = _reader.Peek()) >= 0)
 			{
-				var ch = _input[i];
 				if (IsNameCodePoint(ch))
 				{
-					i++;
-					valueBuilder.Append(ch);
+					valueBuilder.Append((char)_reader.Read());
 				}
-				else if (IsValidEscape(i))
+				else if (IsValidEscape(ch, _reader.Peek(1)))
 				{
-					i++;
-					ConsumeEscapedCodePoint(ref i, valueBuilder);
+					_reader.Read();
+					ConsumeEscapedCodePoint(valueBuilder);
 				}
 				else
 				{
@@ -624,38 +615,40 @@
 				}
 			}
 
-			return i > nameStart;
+			return _reader.Position > namePosition;
 		}
 
-		private void ConsumeEscapedCodePoint(ref int i, StringBuilder valueBuilder)
+		private void ConsumeEscapedCodePoint(StringBuilder valueBuilder)
 		{
+			var ch = _reader.Read();
+
 			// EOF
-			if (i >= _eof)
+			if (ch < 0)
 			{
 				valueBuilder?.Append(REPLACEMENT_CHAR);
 				return;
 			}
 
 			// Hex encoded code point
-			var ch = _input[i++];
-			if (!IsHexDigit(ch))
+			int hexDigit;
+			if (!TryParseHexDigit(ch, out hexDigit))
 			{
-				valueBuilder?.Append(ch);
+				valueBuilder?.Append((char) ch);
 				return;
 			}
 
-			var hexStart = i-1;
-			var hexLength = 1;
-			while (i < _eof && hexLength < 6 && IsHexDigit(_input[i]))
+			int codePoint = hexDigit;
+			int hexDigits = 1;
+			while (hexDigits < 6 && (ch = _reader.Peek()) >= 0 && TryParseHexDigit(ch, out hexDigit))
 			{
-				hexLength++;
-				i++;
+				_reader.Read();
+				codePoint = (codePoint << 4) + hexDigit;
+				hexDigits++;
 			}
-			TryConsumeWhitespace(ref i);
+			TryConsumeWhitespace();
 
 			if (valueBuilder != null)
 			{
-				var codePoint = int.Parse(_input.Substring(hexStart, hexLength), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
 				if (codePoint == 0 || codePoint > MAX_CODE_POINT || IsSurrogateCodePoint(codePoint))
 				{
 					valueBuilder.Append(REPLACEMENT_CHAR);
@@ -671,87 +664,142 @@
 			}
 		}
 
-		private bool TryConsumeNumber(ref int i, out bool isFloatingPoint)
+		private bool TryConsumeNumber(StringBuilder valueBuilder, out bool isFloatingPoint)
 		{
-			var j = i;
-			TryConsumeSign(ref j);
-			var hasDigits = TryConsumeUnsignedInteger(ref j);
-			isFloatingPoint = TryConsumeDecimalFraction(ref j);
-			if (!hasDigits && !isFloatingPoint) return false;
+			isFloatingPoint = false;
 
-			i = j;
-			if (j < _eof)
+			// Read optional sign
+			var foundFraction = false;
+
+			var lookaheadIndex = 0;
+			var ch = _reader.Peek(lookaheadIndex++);
+			if (ch == '+' || ch == '-')
 			{
-				var ch = _input[j++];
-				if (ch == 'E' || ch == 'e')
+				ch = _reader.Peek(lookaheadIndex++);
+			}
+			if (ch == '.')
+			{
+				foundFraction = true;
+				ch = _reader.Peek(lookaheadIndex++);
+			}
+			if (!IsDigit(ch)) return false;
+
+			_reader.Read(valueBuilder, lookaheadIndex - 1);
+			ch = _reader.Peek();
+
+			if (!foundFraction)
+			{
+				// Read additional integer digits
+				while (IsDigit(ch))
 				{
-					TryConsumeSign(ref j);
-					if (TryConsumeUnsignedInteger(ref j))
+					valueBuilder.Append((char) _reader.Read());
+					ch = _reader.Peek();
+				}
+
+				if (ch == '.' && IsDigit(_reader.Peek(1)))
+				{
+					foundFraction = true;
+					_reader.Read(valueBuilder, 2);
+					ch = _reader.Peek();
+				}
+			}
+
+			// Test for optional decimal point and first decimal digit
+			if (foundFraction)
+			{
+				// Read additional integer digits
+				while (IsDigit(ch))
+				{
+					valueBuilder.Append((char)_reader.Read());
+					ch = _reader.Peek();
+				}
+
+				isFloatingPoint = true;
+			}
+
+			// Test for exponent
+			if (ch == 'e' || ch == 'E')
+			{
+				// Test for optional sign
+				lookaheadIndex = 1;
+				ch = _reader.Peek(lookaheadIndex++);
+				if (ch == '+' || ch == '-')
+				{
+					ch = _reader.Peek(lookaheadIndex++);
+				}
+
+				// Test for exponent digit
+				if (IsDigit(ch))
+				{
+					// Read exponent and optional sign
+					_reader.Read(valueBuilder, lookaheadIndex - 1);
+
+					do
 					{
-						i = j;
-						isFloatingPoint = true;
-					}
+						valueBuilder.Append((char)_reader.Read());
+						ch = _reader.Peek();
+					} while (IsDigit(ch));
+
+					isFloatingPoint = true;
 				}
 			}
 
 			return true;
 		}
 
-		private bool TryConsumeDecimalFraction(ref int i)
+		private bool IsValidEscape(int ch1, int ch2)
 		{
-			if (i >= _eof || _input[i] != '.' || i >= _eof - 1 || !IsDigit(_input[i + 1])) return false;
-
-			i += 2;
-			while (i < _eof && IsDigit(_input[i]))
-			{
-				i++;
-			}
-			return true;
+			return ch1 == '\\' && !IsNewLine(ch2);
 		}
 
-		private void TryConsumeSign(ref int i)
-		{
-			if (i >= _eof) return;
-
-			var ch = _input[i];
-			if (ch == '+' || ch == '-') i++;
-		}
-
-		private bool TryConsumeUnsignedInteger(ref int i)
-		{
-			var numberStart = i;
-			while (i < _eof && IsDigit(_input[i]))
-			{
-				i++;
-			}
-			return i > numberStart;
-		}
-
-		private bool IsValidEscape(int i)
-		{
-			if (i >= _eof || _input[i] != '\\') return false;
-			return i == _eof - 1 
-				|| !IsNewLine(_input[i + 1]);
-		}
-
-		private static bool IsDigit(char ch)
+		private static bool IsDigit(int ch)
 		{
 			return ch >= '0' && ch <= '9';
 		}
 
-		private static bool IsHexDigit(char ch)
+		private static bool IsHexDigit(int ch)
 		{
 			return IsDigit(ch)
 				|| (ch >= 'a' && ch <= 'f')
 			    || (ch >= 'A' && ch <= 'F');
 		}
 
-		private static bool IsLetter(char ch)
+		private static bool IsNonPrintable(int ch)
+		{
+			return (ch >= '\u0000' && ch <= '\u0008')
+				|| ch == '\u000B'
+				|| (ch >= '\u000E' && ch <= '\u001F')
+				|| ch == '\u007F';
+		}
+
+		private static bool TryParseHexDigit(int ch, out int result)
+		{
+			if (ch >= '0' && ch <= '9')
+			{
+				result = ch - '0';
+			}
+			else if (ch >= 'A' && ch <= 'F')
+			{
+				result =  ch + 10 - 'A';
+			}
+			else if (ch >= 'a' && ch <= 'f')
+			{
+				result = ch + 10 - 'a';
+			}
+			else
+			{
+				result = 0;
+				return false;
+			}
+			return true;
+		}
+
+		private static bool IsLetter(int ch)
 		{
 			return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 		}
 
-		private static bool IsNewLine(char ch)
+		private static bool IsNewLine(int ch)
 		{
 			switch (ch)
 			{
@@ -764,17 +812,17 @@
 			}
 		}
 
-		private static bool IsNonAscii(char ch)
+		private static bool IsNonAscii(int ch)
 		{
 			return ch > '\u0080';
 		}
 
-		private static bool IsNameStartCodePoint(char ch)
+		private static bool IsNameStartCodePoint(int ch)
 		{
 			return IsLetter(ch) || ch == '_' || IsNonAscii(ch);
 		}
 
-		private static bool IsNameCodePoint(char ch)
+		private static bool IsNameCodePoint(int ch)
 		{
 			return IsNameStartCodePoint(ch) || IsDigit(ch) || ch == '-';
 		}
@@ -789,6 +837,11 @@
 			var result = _valueBuilder.ToString();
 			_valueBuilder.Length = 0;
 			return result;
+		}
+
+		private void NotifyError(string message)
+		{
+			ParseError(this, new CssErrorEventArgs(_lineCount, _reader.Position - _linePos, message));
 		}
 	}
 }

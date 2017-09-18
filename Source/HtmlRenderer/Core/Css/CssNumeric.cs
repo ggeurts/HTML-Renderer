@@ -5,7 +5,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 	using System.Globalization;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	public struct CssNumeric : IEquatable<CssNumeric>
+	public struct CssNumeric : IEquatable<CssNumeric>, IFormattable
 	{
 		private readonly double _value;
 		private readonly string _unit;
@@ -56,6 +56,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 			return _unit != null
 				? string.Format(CultureInfo.InvariantCulture, "{0}{1}", _value, _unit)
 				: _value.ToString(CultureInfo.InvariantCulture);
+		}
+
+		public string ToString(string format, IFormatProvider formatProvider)
+		{
+			var valueText = _value.ToString(format, formatProvider);
+			return _unit != null
+				? valueText + _unit
+				: valueText;
 		}
 	}
 }

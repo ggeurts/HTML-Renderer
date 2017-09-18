@@ -1,10 +1,9 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css
 {
 	using System;
-	using System.Globalization;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	public struct CssUnicodeRange : IEquatable<CssUnicodeRange>
+	public struct CssUnicodeRange : IEquatable<CssUnicodeRange>, IFormattable
 	{
 		public int RangeStart { get; }
 		public int RangeEnd { get; }
@@ -34,9 +33,15 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 
 		public override string ToString()
 		{
-			return this.RangeStart == this.RangeEnd
-				? this.RangeStart.ToString("X6")
-				: string.Format(CultureInfo.InvariantCulture, "{0:X6}-{1:X6}", this.RangeStart, this.RangeEnd);
+			return ToString(null, null);
 		}
+
+		public string ToString(string format, IFormatProvider formatProvider)
+		{
+			return this.RangeStart == this.RangeEnd
+				? this.RangeStart.ToString("X6", formatProvider)
+				: string.Format(formatProvider, "{0:X6}-{1:X6}", this.RangeStart, this.RangeEnd);
+		}
+
 	}
 }

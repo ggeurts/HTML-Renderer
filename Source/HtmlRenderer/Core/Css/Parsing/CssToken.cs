@@ -10,38 +10,19 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		public static readonly EqualityComparer<CssToken> TokenValueComparer = new CssTokenValueEqualityComparer();
 
 		private readonly CssTokenType _tokenType;
-		private readonly int _position;
-		private readonly int _length;
 		private readonly CssTokenData _data;
 
-		internal CssToken(CssTokenType tokenType, int startPos, int length, CssTokenData data)
+		internal CssToken(CssTokenType tokenType, CssTokenData data)
 		{
 			ArgChecker.AssertArgNotNull(data, nameof(data));
 
 			_tokenType = tokenType;
-			_position = startPos;
-			_length = length;
 			_data = data;
 		}
 
 		public CssTokenType TokenType
 		{
 			get { return _tokenType; }
-		}
-
-		public int Position
-		{
-			get { return _position; }
-		}
-
-		public int Length
-		{
-			get { return _length; }
-		}
-
-		public string RawValue
-		{
-			get { return _data.GetRawValue(ref this); }
 		}
 
 		public CssNumeric? NumericValue
@@ -118,7 +99,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		[SuppressMessage("ReSharper", "AssignNullToNotNullAttribute")]
 		public override string ToString()
 		{
-			return _data?.GetRawValue(ref this);
+			return _data?.ToString(ref this);
 		}
 
 		private class CssTokenValueEqualityComparer : EqualityComparer<CssToken>

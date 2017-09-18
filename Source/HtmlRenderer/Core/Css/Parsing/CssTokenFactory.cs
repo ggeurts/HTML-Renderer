@@ -4,20 +4,16 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 	public class CssTokenFactory
 	{
-		private readonly string _input;
-		private readonly CssStringTokenData _rawStringData;
 		private readonly CssStringTokenData _whiteSpaceData;
 
-		public CssTokenFactory(string input)
+		public CssTokenFactory()
 		{
-			_input = input;
-			_rawStringData = new CssStringTokenData(input, null);
-			_whiteSpaceData = new CssStringTokenData(input, " ");
+			_whiteSpaceData = new CssStringTokenData(" ");
 		}
 
-		public CssToken CreateToken(int pos)
+		public CssToken CreateToken(char ch)
 		{
-			var tokenType = (CssTokenType)(_input[pos] & 0xFF);
+			var tokenType = (CssTokenType)(ch & 0xFF);
 			switch (tokenType)
 			{
 				case CssTokenType.Colon:
@@ -35,46 +31,46 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 					break;
 			}
 
-			return new CssToken(tokenType, pos, 1, CssAsciiTokenData.Instance);
+			return new CssToken(tokenType, CssAsciiTokenData.Instance);
 		}
 
-		public CssToken CreateIdentifierToken(int startPos, int length, string value)
+		public CssToken CreateIdentifierToken(string value)
 		{
-			return new CssToken(CssTokenType.Identifier, startPos, length, new CssStringTokenData(_input, value));   
+			return new CssToken(CssTokenType.Identifier, new CssStringTokenData(value));   
 		}
 
-		public CssToken CreateFunctionToken(int startPos, int length, string name)
+		public CssToken CreateFunctionToken(string name)
 		{
-			return new CssToken(CssTokenType.Function, startPos, length, new CssStringTokenData(_input, name));
+			return new CssToken(CssTokenType.Function, new CssStringTokenData(name));
 		}
 
-		public CssToken CreateUrlToken(int startPos, int length, string value, bool isInvalid)
+		public CssToken CreateUrlToken(string value, bool isInvalid)
 		{
 			var tokenType = CssTokenType.Url;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
-			return new CssToken(tokenType, startPos, length, new CssStringTokenData(_input, value));
+			return new CssToken(tokenType, new CssStringTokenData(value));
 		}
 
-		public CssToken CreateHashToken(int startPos, int length, string value, bool isIdentifier)
+		public CssToken CreateHashToken(string value, bool isIdentifier)
 		{
 			var tokenType = CssTokenType.Hash;
 			if (isIdentifier) tokenType |= CssTokenType.IdentifierType;
-			return new CssToken(tokenType, startPos, length, new CssStringTokenData(_input, value));
+			return new CssToken(tokenType, new CssStringTokenData(value));
 		}
 
-		public CssToken CreateAtKeywordToken(int startPos, int length, string value)
+		public CssToken CreateAtKeywordToken(string value)
 		{
-			return new CssToken(CssTokenType.AtKeyword, startPos, length, new CssStringTokenData(_input, value));
+			return new CssToken(CssTokenType.AtKeyword, new CssStringTokenData(value));
 		}
 
-		public CssToken CreateStringToken(int startPos, int length, string value, bool isInvalid)
+		public CssToken CreateStringToken(string value, bool isInvalid)
 		{
 			var tokenType = CssTokenType.QuotedString;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
-			return new CssToken(tokenType, startPos, length, new CssStringTokenData(_input, value));
+			return new CssToken(tokenType, new CssStringTokenData(value));
 		}
 
-		public CssToken CreateNumericToken(int startPos, int length, bool isFloatingPoint, double value, string unit)
+		public CssToken CreateNumericToken(bool isFloatingPoint, double value, string unit)
 		{
 			var tokenType = string.IsNullOrEmpty(unit)
 				? CssTokenType.Number
@@ -82,22 +78,22 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 					? CssTokenType.Percentage
 					: CssTokenType.Dimension;
 			if (isFloatingPoint) tokenType |= CssTokenType.FloatingPointType;
-			return new CssToken(tokenType, startPos, length, new CssTokenData<CssNumeric>(_input, new CssNumeric(value, unit)));
+			return new CssToken(tokenType, new CssTokenData<CssNumeric>(new CssNumeric(value, unit)));
 		}
 
-		public CssToken CreateOperatorToken(int pos)
+		public CssToken CreateOperatorToken(char ch)
 		{
-			return new CssToken(CssTokenType.MatchOperator | (CssTokenType)_input[pos], pos, 2, _rawStringData);
+			return new CssToken(CssTokenType.MatchOperator | (CssTokenType)ch, CssOperatorTokenData.Instance);
 		}
 
-		public CssToken CreateColumnToken(int pos)
+		public CssToken CreateColumnToken()
 		{
-			return new CssToken(CssTokenType.Column, pos, 2, _rawStringData);
+			return new CssToken(CssTokenType.Column, CssOperatorTokenData.Instance);
 		}
 
-		public CssToken CreateUnicodeRangeToken(int startPos, int length, int rangeStart, int rangeEnd)
+		public CssToken CreateUnicodeRangeToken(int rangeStart, int rangeEnd)
 		{
-			return new CssToken(CssTokenType.UnicodeRange, startPos, length, new CssTokenData<CssUnicodeRange>(_input, new CssUnicodeRange(rangeStart, rangeEnd)));
+			return new CssToken(CssTokenType.UnicodeRange, new CssTokenData<CssUnicodeRange>(new CssUnicodeRange(rangeStart, rangeEnd)));
 		}
 
 		//public CssToken CreateCommentToken(int startPos, int length)
@@ -105,19 +101,19 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		//	return new CssToken(CssTokenType.Comment, startPos, length, _rawStringData);
 		//}
 
-		public CssToken CreateCdoToken(int startPos)
+		public CssToken CreateCdoToken()
 		{
-			return new CssToken(CssTokenType.CDO, startPos, 3, _rawStringData);
+			return new CssToken(CssTokenType.CDO, new CssStringTokenData("<!--"));
 		}
 
-		public CssToken CreateCdcToken(int startPos)
+		public CssToken CreateCdcToken()
 		{
-			return new CssToken(CssTokenType.CDC, startPos, 3, _rawStringData);
+			return new CssToken(CssTokenType.CDC, new CssStringTokenData("-->"));
 		}
 
-		public CssToken CreateWhitespaceToken(int startPos, int length)
+		public CssToken CreateWhitespaceToken()
 		{
-			return new CssToken(CssTokenType.Whitespace, startPos, length, _whiteSpaceData);
+			return new CssToken(CssTokenType.Whitespace, _whiteSpaceData);
 		}
 	}
 }

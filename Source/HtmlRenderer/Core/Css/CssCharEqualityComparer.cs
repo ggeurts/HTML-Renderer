@@ -6,19 +6,13 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 	{
 		public override bool Equals(char x, char y)
 		{
-			return ToLowerAscii(x) == ToLowerAscii(y);
+			return x.ToLowerAscii() == y.ToLowerAscii();
 		}
 
 		public override int GetHashCode(char obj)
 		{
-			return ToLowerAscii(obj).GetHashCode();
+			return obj.ToLowerAscii().GetHashCode();
 		}
 
-		private static char ToLowerAscii(char ch)
-		{
-			return ch >= '\u0041' && ch <= '\u005A'
-				? (char)(ch + 0x20)
-				: ch;
-		}
 	}
 }

@@ -1,24 +1,25 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
 	using System;
+	using System.Globalization;
+	using System.Text;
 	using TheArtOfDev.HtmlRenderer.Core.Css;
+	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	internal abstract class CssTokenData
 	{
-		public abstract string GetRawValue(ref CssToken token);
+		public abstract string ToString(ref CssToken token);
 		public abstract CssValue CreateComponent(ref CssToken token);
 		public abstract bool Equals(ref CssToken token, ref CssToken otherToken, CssTokenData otherData);
 		public abstract int GetHashCode(ref CssToken token);
 	}
 
-	internal sealed class CssTokenData<T> : CssTokenData where T : struct, IEquatable<T>
+	internal sealed class CssTokenData<T> : CssTokenData where T : struct, IEquatable<T>, IFormattable
 	{
-		private readonly string _input;
 		private readonly T _value;
 
-		public CssTokenData(string input, T value)
+		public CssTokenData(T value)
 		{
-			_input = input;
 			_value = value;
 		}
 
@@ -27,9 +28,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			get { return _value; }
 		}
 
-		public override string GetRawValue(ref CssToken token)
+		public override string ToString(ref CssToken token)
 		{
-			return _input.Substring(token.Position, token.Length);
+			return _value.ToString(null, CultureInfo.InvariantCulture);
 		}
 
 		public override CssValue CreateComponent(ref CssToken token)
@@ -57,9 +58,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		private CssAsciiTokenData()
 		{ }
 
-		public override string GetRawValue(ref CssToken token)
+		public override string ToString(ref CssToken token)
 		{
-			return GetValue(ref token).ToString();
+			return new string(GetValue(ref token), 1);
 		}
 
 		public char GetValue(ref CssToken token)
@@ -76,9 +77,45 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 		public override bool Equals(ref CssToken token, ref CssToken otherToken, CssTokenData otherData)
 		{
-			var otherTypedData = otherData as CssAsciiTokenData;
-			return otherTypedData != null
-			    && otherTypedData.GetValue(ref otherToken).Equals(GetValue(ref token));
+			return token.TokenType == otherToken.TokenType
+				&& ReferenceEquals(this, otherData);
+		}
+
+		public override int GetHashCode(ref CssToken token)
+		{
+			return (int)token.TokenType & 0xFF;
+		}
+	}
+
+	internal sealed class CssOperatorTokenData : CssTokenData
+	{
+		public static readonly CssOperatorTokenData Instance = new CssOperatorTokenData();
+
+		private CssOperatorTokenData()
+		{ }
+
+		public override string ToString(ref CssToken token)
+		{
+			switch (token.TokenType)
+			{
+				case CssTokenType.Column:
+					return "||";
+				default:
+					return new StringBuilder(2).Append((char) ((int) token.TokenType & 0xFF)).Append('=').ToString();
+			}
+		}
+
+		public override CssValue CreateComponent(ref CssToken token)
+		{
+			return token.IsWhitespace
+				? CssValue.Whitespace
+				: new CssValue<string>(token.TokenType, ToString(ref token));
+		}
+
+		public override bool Equals(ref CssToken token, ref CssToken otherToken, CssTokenData otherData)
+		{
+			return token.TokenType == otherToken.TokenType
+				&& ReferenceEquals(this, otherData);
 		}
 
 		public override int GetHashCode(ref CssToken token)
@@ -89,23 +126,22 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 	internal sealed class CssStringTokenData : CssTokenData
 	{
-		private readonly string _input;
-		private string _value;
+		private readonly string _value;
 
-		public CssStringTokenData(string input, string value)
+		public CssStringTokenData(string value)
 		{
-			_input = input;
+			ArgChecker.AssertArgNotNull(value, nameof(value));
 			_value = value;
 		}
 
 		public string GetValue(ref CssToken token)
 		{
-			return _value ?? (_value = GetRawValue(ref token) ?? "");
+			return _value;
 		}
 
-		public override string GetRawValue(ref CssToken token)
+		public override string ToString(ref CssToken token)
 		{
-			return _input.Substring(token.Position, token.Length);
+			return _value;
 		}
 
 		public override CssValue CreateComponent(ref CssToken token)
