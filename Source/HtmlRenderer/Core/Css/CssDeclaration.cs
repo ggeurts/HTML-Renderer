@@ -5,23 +5,24 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 	using System.Collections.Immutable;
 	using System.Linq;
 	using System.Text;
+	using TheArtOfDev.HtmlRenderer.Core.Css.Parsing;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public class CssDeclaration : CssComponent
 	{
 		private readonly string _name;
-		private readonly ImmutableArray<CssValue> _values;
+		private readonly ImmutableArray<CssToken> _values;
 		private readonly bool _isImportant;
 
-		public CssDeclaration(string name, CssValue value, bool isImportant)
+		public CssDeclaration(string name, CssToken value, bool isImportant)
 			: this(name, ImmutableArray.Create(value), isImportant)
 		{ }
 
-		public CssDeclaration(string name, IEnumerable<CssValue> values, bool isImportant)
+		public CssDeclaration(string name, IEnumerable<CssToken> values, bool isImportant)
 			: this(name, ImmutableArray.CreateRange(values), isImportant)
 		{}
 
-		public CssDeclaration(string name, ImmutableArray<CssValue> values, bool isImportant)
+		public CssDeclaration(string name, ImmutableArray<CssToken> values, bool isImportant)
 		{
 			ArgChecker.AssertArgNotNullOrEmpty(name, nameof(name));
 			_name = name;
@@ -34,7 +35,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 			get { return _name; }
 		}
 
-		public ImmutableArray<CssValue> Values
+		public ImmutableArray<CssToken> Values
 		{
 			get { return _values; }
 		}

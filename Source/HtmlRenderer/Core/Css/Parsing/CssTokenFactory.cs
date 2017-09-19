@@ -1,15 +1,16 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
+	using System.Collections.Generic;
 	using TheArtOfDev.HtmlRenderer.Core.Css;
 
 	public class CssTokenFactory
 	{
-		private readonly CssToken _whiteSpaceToken;
-
-		public CssTokenFactory()
-		{
-			_whiteSpaceToken = new CssStringToken(CssTokenType.Whitespace, " ");
-		}
+		private readonly Dictionary<CssTokenType, CssToken> _simpleTokenCache 
+			= new Dictionary<CssTokenType, CssToken>();
+		private readonly Dictionary<KeyValuePair<CssTokenType, string>, CssStringToken> _stringTokenCache 
+			= new Dictionary<KeyValuePair<CssTokenType, string>, CssStringToken>();
+		private readonly Dictionary<CssNumeric, CssToken<CssNumeric>> _numericTokenCache
+			= new Dictionary<CssNumeric, CssToken<CssNumeric>>();
 
 		public CssToken CreateToken(char ch)
 		{
@@ -31,43 +32,50 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 					break;
 			}
 
-			return new CssAsciiToken(tokenType);
+			CssToken token;
+			if (!_simpleTokenCache.TryGetValue(tokenType, out token))
+			{
+				token = new CssAsciiToken(tokenType);
+				_simpleTokenCache.Add(tokenType, token);
+			}
+			return token;
 		}
 
 		public CssToken CreateIdentifierToken(string value)
 		{
-			return new CssStringToken(CssTokenType.Identifier, value);   
+			return GetOrCreateStringToken(CssTokenType.Identifier, value);   
 		}
 
 		public CssToken CreateFunctionToken(string name)
 		{
-			return new CssStringToken(CssTokenType.Function, name);
+			return GetOrCreateStringToken(CssTokenType.Function, name);
 		}
 
 		public CssToken CreateUrlToken(string value, bool isInvalid)
 		{
 			var tokenType = CssTokenType.Url;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
-			return new CssStringToken(tokenType, value);
+			return GetOrCreateStringToken(tokenType, value);
 		}
 
 		public CssToken CreateHashToken(string value, bool isIdentifier)
 		{
 			var tokenType = CssTokenType.Hash;
 			if (isIdentifier) tokenType |= CssTokenType.IdentifierType;
-			return new CssStringToken(tokenType, value);
+			return GetOrCreateStringToken(tokenType, value);
 		}
 
 		public CssToken CreateAtKeywordToken(string value)
 		{
-			return new CssStringToken(CssTokenType.AtKeyword, value);
+			return GetOrCreateStringToken(CssTokenType.AtKeyword, value);
 		}
 
 		public CssToken CreateStringToken(string value, bool isInvalid)
 		{
 			var tokenType = CssTokenType.QuotedString;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
-			return new CssStringToken(tokenType, value);
+
+			return GetOrCreateStringToken(tokenType, value);
 		}
 
 		public CssToken CreateNumericToken(bool isFloatingPoint, double value, string unit)
@@ -78,12 +86,29 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 					? CssTokenType.Percentage
 					: CssTokenType.Dimension;
 			if (isFloatingPoint) tokenType |= CssTokenType.FloatingPointType;
-			return new CssToken<CssNumeric>(tokenType, new CssNumeric(value, unit));
+
+			var numeric = new CssNumeric(value, unit);
+
+			CssToken<CssNumeric> token;
+			if (!_numericTokenCache.TryGetValue(numeric, out token))
+			{
+				token = new CssToken<CssNumeric>(tokenType, numeric);
+				_numericTokenCache.Add(numeric, token);
+			}
+			return token;
 		}
 
 		public CssToken CreateOperatorToken(char ch)
 		{
-			return new CssOperatorToken(CssTokenType.MatchOperator | (CssTokenType)ch);
+			var tokenType = CssTokenType.MatchOperator | (CssTokenType) ch;
+
+			CssToken token;
+			if (!_simpleTokenCache.TryGetValue(tokenType, out token))
+			{
+				token = new CssOperatorToken(tokenType);
+				_simpleTokenCache.Add(tokenType, token);
+			}
+			return token;
 		}
 
 		public CssToken CreateColumnToken()
@@ -103,17 +128,25 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 		public CssToken CreateCdoToken()
 		{
-			return new CssStringToken(CssTokenType.CDO, "<!--");
+			return GetOrCreateStringToken(CssTokenType.CDO, "<!--");
 		}
 
 		public CssToken CreateCdcToken()
 		{
-			return new CssStringToken(CssTokenType.CDC, "-->");
+			return GetOrCreateStringToken(CssTokenType.CDC, "-->");
 		}
 
-		public CssToken CreateWhitespaceToken()
+		private CssStringToken GetOrCreateStringToken(CssTokenType tokenType, string value)
 		{
-			return _whiteSpaceToken;
+			var key = new KeyValuePair<CssTokenType, string>(tokenType, value);
+
+			CssStringToken token;
+			if (!_stringTokenCache.TryGetValue(key, out token))
+			{
+				token = new CssStringToken(tokenType, value);
+				_stringTokenCache.Add(key, token);
+			}
+			return token;
 		}
 	}
 }

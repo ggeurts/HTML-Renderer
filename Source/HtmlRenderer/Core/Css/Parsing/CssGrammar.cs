@@ -10,14 +10,17 @@
 	{
 		public virtual CssComponent ConsumeQualifiedRulePrelude(CssParser.FragmentParser parser)
 		{
+			var firstComponent = parser.CurrentToken;
+			if (!parser.MoveNext()) return firstComponent;
+
 			var components = ImmutableArray.CreateBuilder<CssComponent>();
-			do {
-				components.Add(parser.ConsumeValue());
+			components.Add(firstComponent);
+			do
+			{
+				components.Add(parser.CurrentToken);
 			} while (parser.MoveNext());
 
-			return components.Count > 1
-				? new CssCompositeComponent(components.ToImmutable())
-				: components[0];
+			return new CssCompositeComponent(components.ToImmutable());
 		}
 
 		public virtual CssBlock ConsumeQualifiedRuleBlock(CssParser.FragmentParser parser)
@@ -27,15 +30,17 @@
 
 		public virtual CssComponent ConsumeAtRulePrelude(string name, CssParser.FragmentParser parser)
 		{
+			var firstComponent = parser.CurrentToken;
+			if (!parser.MoveNext()) return firstComponent;
+
 			var components = ImmutableArray.CreateBuilder<CssComponent>();
+			components.Add(firstComponent);
 			do
 			{
-				components.Add(parser.ConsumeValue());
+				components.Add(parser.CurrentToken);
 			} while (parser.MoveNext());
 
-			return components.Count > 1
-				? new CssCompositeComponent(components.ToImmutable())
-				: components[0];
+			return new CssCompositeComponent(components.ToImmutable());
 		}
 
 		public virtual CssBlock ConsumeAtRuleBlock(string name, CssParser.FragmentParser parser)
@@ -53,7 +58,7 @@
 			return new CssAtRule(name, prelude, block);
 		}
 
-		public virtual CssDeclaration CreateDeclaration(string name, ImmutableArray<CssValue> values, bool isImportant)
+		public virtual CssDeclaration CreateDeclaration(string name, ImmutableArray<CssToken> values, bool isImportant)
 		{
 			return new CssDeclaration(name, values, isImportant);
 		}

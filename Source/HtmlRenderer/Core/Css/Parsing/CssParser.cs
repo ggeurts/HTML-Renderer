@@ -1,8 +1,8 @@
 ﻿namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
-	using System;
 	using System.Collections.Generic;
 	using System.Collections.Immutable;
+	using System.Diagnostics.CodeAnalysis;
 	using TheArtOfDev.HtmlRenderer.Core.Css;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
@@ -21,11 +21,6 @@
 
 		private readonly IEnumerator<CssToken> _tokenizer;
 		private readonly CssGrammar _grammar;
-
-		/// <summary>
-		/// A map of tokens to components to reduce CssSimpleComponent memory allocations
-		/// </summary>
-		private readonly Dictionary<CssToken, CssValue> _componentTable = new Dictionary<CssToken, CssValue>();
 
 		#endregion
 
@@ -209,10 +204,10 @@
 			if (!SkipWhiteSpace()) return null;								// Syntax error: unexpected EOF
 			if (CurrentToken.TokenType != CssTokenType.Colon) return null;	// Parse error: expected colon
 
-			var values = ImmutableArray.CreateBuilder<CssValue>(4);
+			var values = ImmutableArray.CreateBuilder<CssToken>(4);
 			while (MoveNext() && CurrentToken.TokenType != endTokenType)
 			{
-				values.Add(ConsumeValue());
+				values.Add(CurrentToken);
 			}
 
 			var isImportant = TrimTrailingImportantPhrase(values);
@@ -224,19 +219,19 @@
 		/// </summary>
 		/// <param name="values"></param>
 		/// <returns>Returns <c>true</c> if !important fragment was removed.</returns>
-		private static bool TrimTrailingImportantPhrase(ImmutableArray<CssValue>.Builder values)
+		private static bool TrimTrailingImportantPhrase(ImmutableArray<CssToken>.Builder values)
 		{
 			var m = values.Count - 1;
 			int i;
 
 			// Skip trailing whitespace
-			for (i = m; i > 0 && values[i].IsWhitespace; i--) ;
+			for (i = m; i > 0 && values[i].IsWhitespace; i--) { }
 
 			// Test for identifier "important" 
-			if (i >= 1 && values[i].HasValue("important", StringComparison.OrdinalIgnoreCase))
+			if (i >= 1 && values[i].HasValue("important"))
 			{
 				// Skip whitespace before the "important" identifier 
-				for (i = i - 1; i >= 0 && values[i].IsWhitespace; i--) ;
+				for (i = i - 1; i >= 0 && values[i].IsWhitespace; i--) { }
 				// Test for "!" delimiter
 				if (i >= 0 && values[i].HasValue('!'))
 				{
@@ -266,7 +261,7 @@
 				case CssTokenType.Function:
 					return ConsumeFunction();
 				default:
-					return ConsumeValue();
+					return CurrentToken;
 			}
 		}
 
@@ -291,17 +286,6 @@
 			}
 
 			return _grammar.CreateFunction(name, components.ToImmutable());
-		}
-
-		protected CssValue ConsumeValue()
-		{
-			CssValue result;
-			if (!_componentTable.TryGetValue(CurrentToken, out result))
-			{
-				result = CurrentToken.CreateComponent();
-				_componentTable.Add(CurrentToken, result);
-			}
-			return result;
 		}
 
 		#endregion
@@ -360,6 +344,7 @@
 				get { return _state >= 2; }
 			}
 
+			[SuppressMessage("ReSharper", "PossibleNullReferenceException")]
 			public bool MoveNext()
 			{
 				var tokenizer = _parser._tokenizer;
@@ -399,17 +384,12 @@
 
 			public CssComponent ConsumeComponent()
 			{
-				return _parser.ConsumeValue();
+				return _parser.ConsumeComponent();
 			}
 
 			public CssBlock ConsumeSimpleBlock(CssBlockType blockType)
 			{
 				return _parser.ConsumeSimpleBlock(blockType);
-			}
-
-			public CssValue ConsumeValue()
-			{
-				return _parser.ConsumeValue();
 			}
 
 			protected abstract bool IsEndToken(CssTokenType tokenType);

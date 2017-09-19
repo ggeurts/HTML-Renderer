@@ -51,7 +51,6 @@
     <Compile Include="Core\Css\CssCharExtensions.cs" />
     <Compile Include="Core\Css\CssEqualityComparer.cs" />
     <Compile Include="Core\Css\CssNode.cs" />
-    <Compile Include="Core\Css\CssValue.cs" />
     <Compile Include="Core\Css\Parsing\CssError.cs" />
     <Compile Include="Core\Css\Parsing\CssGrammar.cs" />
     <Compile Include="Core\Css\Parsing\CssReader.cs" />

@@ -476,7 +476,7 @@
 		private CssToken ConsumeWhitespaceToken()
 		{
 			while (TryConsumeWhitespace()) {}
-			return _factory.CreateWhitespaceToken();
+			return CssToken.Whitespace;
 		}
 
 		private bool TryConsumeComment(out string comment)

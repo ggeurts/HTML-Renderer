@@ -6,8 +6,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 	using TheArtOfDev.HtmlRenderer.Core.Css;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	public abstract class CssToken
+	public abstract class CssToken : CssComponent
 	{
+		public static readonly CssToken Whitespace = new CssStringToken(CssTokenType.Whitespace, " ");
+
 		private readonly CssTokenType _tokenType;
 
 		internal CssToken(CssTokenType tokenType)
@@ -86,7 +88,35 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 				&& _tokenType == (CssTokenType.Delimiter | (CssTokenType)value);
 		}
 
+		public bool HasValue(string value)
+		{
+			if (value == null) return false;
+			if (value.Length == 1) return HasValue(value[0]);
+
+			var token = this as CssStringToken;
+			return token != null
+			    && CssEqualityComparer<string>.Default.Equals(token.Value, value);
+		}
+
+		public bool HasValue(char value)
+		{
+			var asciiToken = this as CssAsciiToken;
+			if (asciiToken != null && asciiToken.Value == value) return true;
+
+			var stringToken = this as CssStringToken;
+			if (stringToken != null 
+				&& stringToken.Value.Length == 1 
+				&& CssCharEqualityComparer.Default.Equals(stringToken.Value[0], value)) return true;
+
+			return false;
+		}
+
 		public abstract override string ToString();
+
+		public override void ToString(StringBuilder sb)
+		{
+			sb.Append(ToString());
+		}
 
 		public override bool Equals(object obj)
 		{
@@ -99,8 +129,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		{
 			return (int)_tokenType;
 		}
-
-		internal abstract CssValue CreateComponent();
 	}
 
 	public sealed class CssToken<T> : CssToken 
@@ -134,11 +162,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		{
 			return HashUtility.Hash((int) this.TokenType, _value.GetHashCode());
 		}
-
-		internal override CssValue CreateComponent()
-		{
-			return new CssValue<T>(this.TokenType, _value);
-		}
 	}
 
 	public sealed class CssAsciiToken : CssToken
@@ -155,13 +178,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		public override string ToString()
 		{
 			return new string(this.Value, 1);
-		}
-
-		internal override CssValue CreateComponent()
-		{
-			return this.IsWhitespace
-				? CssValue.Whitespace
-				: new CssValue<char>(this.TokenType, this.Value);
 		}
 	}
 
@@ -181,14 +197,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 					return new StringBuilder(2).Append((char)((int)this.TokenType & 0xFF)).Append('=').ToString();
 			}
 		}
-
-		internal override CssValue CreateComponent()
-		{
-			return new CssValue<string>(this.TokenType, ToString());
-		}
 	}
 
-	internal sealed class CssStringToken : CssToken
+	public sealed class CssStringToken : CssToken
 	{
 		private readonly string _value;
 
@@ -220,13 +231,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		public override int GetHashCode()
 		{
 			return HashUtility.Hash(base.GetHashCode(), CssEqualityComparer<string>.Default.GetHashCode(_value));
-		}
-
-		internal override CssValue CreateComponent()
-		{
-			return this.IsWhitespace
-				? CssValue.Whitespace
-				: new CssValue<string>(this.TokenType, _value);
 		}
 	}
 }
