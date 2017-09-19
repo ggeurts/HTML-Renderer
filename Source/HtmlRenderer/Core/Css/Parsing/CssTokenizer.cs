@@ -30,15 +30,23 @@
 
 		public static IEnumerable<CssToken> Tokenize(string input)
 		{
+			ArgChecker.AssertArgNotNull(input, nameof(input));
 			return input != null 
-				? new CssTokenizer(new CssReader(new StringReader(input))).Tokenize()
+				? new CssTokenizer(new CssReader(input)).Tokenize()
 				: Enumerable.Empty<CssToken>();
 		}
 
-		//public static IEnumerable<CssToken> Tokenize(string input, int start, int count)
-		//{
-		//	return new CssTokenizer(new CssReader(new StringReader(input))).Tokenize();
-		//}
+		public static IEnumerable<CssToken> Tokenize(string input, int start, int count)
+		{
+			return new CssTokenizer(new CssReader(input, start, count)).Tokenize();
+		}
+
+		public static IEnumerable<CssToken> Tokenize(TextReader textReader)
+		{
+			ArgChecker.AssertArgNotNull(textReader, nameof(textReader));
+			return new CssTokenizer(new CssReader(textReader)).Tokenize();
+		}
+
 
 		private IEnumerable<CssToken> Tokenize()
 		{

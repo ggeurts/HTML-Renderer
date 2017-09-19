@@ -71,7 +71,7 @@
 
 		#endregion
 
-		#region ParseDeclarationTest
+		#region ParseDeclaration Tests
 
 		[Test]
 		[TestCaseSource(nameof(SingleDeclarationTestCases))]
@@ -81,6 +81,10 @@
 			var component = parser.ParseDeclaration();
 			Assert.That(component, Is.EqualTo(expectedDeclaration));
 		}
+
+		#endregion
+
+		#region ParseDeclarationList tests
 
 		#endregion
 

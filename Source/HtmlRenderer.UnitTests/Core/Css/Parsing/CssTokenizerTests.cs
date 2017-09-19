@@ -1,5 +1,8 @@
 ﻿namespace HtmlRenderer.UnitTests.Core.Css.Parsing
 {
+	using System;
+	using System.Collections.Generic;
+	using System.IO;
 	using System.Linq;
 	using NUnit.Framework;
 	using TheArtOfDev.HtmlRenderer.Core.Css;
@@ -16,6 +19,44 @@
 		private static readonly TokenData LeftCurlyBracket = new TokenData(CssTokenType.LeftCurlyBracket);
 		private static readonly TokenData RightCurlyBracket = new TokenData(CssTokenType.RightCurlyBracket);
 		private static readonly TokenData Semicolon = new TokenData(CssTokenType.Semicolon);
+
+		#endregion
+
+		#region Input tests
+
+		[Test]
+		public void CanTokenizeString()
+		{
+			VerifyTokens(CssTokenizer.Tokenize("body { margin:0 }"),
+				Identifier("body"), WhiteSpace,
+				LeftCurlyBracket,
+				WhiteSpace, Identifier("margin"), Colon, NumberLiteral(0), WhiteSpace,
+				RightCurlyBracket);
+		}
+
+		[Test]
+		public void CanTokenizeSubstring()
+		{
+			var xml = "<style>body { margin:0 }</style>";
+			var index = xml.IndexOf("body", StringComparison.Ordinal);
+			var count = xml.IndexOf("</style>", StringComparison.Ordinal) - index;
+
+			VerifyTokens(CssTokenizer.Tokenize("<style>body { margin:0 }</style>", index, count),
+				Identifier("body"), WhiteSpace,
+				LeftCurlyBracket,
+				WhiteSpace, Identifier("margin"), Colon, NumberLiteral(0), WhiteSpace,
+				RightCurlyBracket);
+		}
+
+		[Test]
+		public void CanTokenizeTextReader()
+		{
+			VerifyTokens(CssTokenizer.Tokenize(new StringReader("body { margin:0 }")),
+				Identifier("body"), WhiteSpace,
+				LeftCurlyBracket,
+				WhiteSpace, Identifier("margin"), Colon, NumberLiteral(0), WhiteSpace,
+				RightCurlyBracket);
+		}
 
 		#endregion
 
@@ -439,8 +480,13 @@
 
 		private static void VerifyTokenizer(string css, params TokenData[] expectedTokens)
 		{
+			VerifyTokens(CssTokenizer.Tokenize(css), expectedTokens);
+		}
+
+		private static void VerifyTokens(IEnumerable<CssToken> actualTokens, params TokenData[] expectedTokens)
+		{
+			var tokens = actualTokens.ToArray();
 			var tokenIndex = 0;
-			var tokens = CssTokenizer.Tokenize(css).ToArray();
 			foreach (var expectedToken in expectedTokens)
 			{
 				if (tokens.Length <= tokenIndex)
@@ -458,15 +504,17 @@
 						break;
 					case CssTokenType.MatchOperator:
 						Assert.That(token.IsMatchOperator, Is.True, "[Token {0}]IsMatchOperator", tokenIndex);
-						Assert.That(token.StringValue, Is.EqualTo((char)expectedToken.Value + "="), "[Token {0}]RawValue", tokenIndex);
+						Assert.That(token.StringValue, Is.EqualTo((char) expectedToken.Value + "="), "[Token {0}]RawValue", tokenIndex);
 						break;
 					case CssTokenType.UnicodeRange:
-						Assert.That(token.UnicodeRangeValue, Is.EqualTo((CssUnicodeRange)expectedToken.Value), "[Token {0}]UnicodeRangeValue", tokenIndex);
+						Assert.That(token.UnicodeRangeValue, Is.EqualTo((CssUnicodeRange) expectedToken.Value),
+							"[Token {0}]UnicodeRangeValue", tokenIndex);
 						break;
 					default:
 						if (token.IsNumber || token.IsDimension || token.IsPercentage)
 						{
-							Assert.That(token.NumericValue, Is.EqualTo((CssNumeric)expectedToken.Value), "[Token {0}]NumericValue", tokenIndex);
+							Assert.That(token.NumericValue, Is.EqualTo((CssNumeric) expectedToken.Value), "[Token {0}]NumericValue",
+								tokenIndex);
 						}
 						break;
 				}

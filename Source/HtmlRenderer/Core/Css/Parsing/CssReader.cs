@@ -14,6 +14,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		private int _cyclicBufferLen;
 		private int _position = -1;
 
+		public CssReader(string input)
+			: this(new StringReader(input))
+		{ }
+
+		public CssReader(string input, int index, int count)
+			: this(new SubstringReader(input, index, count))
+		{ }
+
 		public CssReader(TextReader textReader)
 		{
 			ArgChecker.AssertArgNotNull(textReader, nameof(textReader));
@@ -105,6 +113,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			if (readCount < minLength)
 			{
 				_cyclicBufferLen += _textReader.ReadBlock(_cyclicBuffer, 0, _cyclicBufferPos);
+				if (_cyclicBufferLen == 0) _cyclicBuffer = null;
 			}
 			return _cyclicBufferLen >= minLength;
 		}
@@ -125,6 +134,55 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 				if (prefix[i].ToLowerAscii() != _cyclicBuffer[(_cyclicBufferPos + i) % _cyclicBuffer.Length]) return false;
 			}
 			return true;
+		}
+
+		private class SubstringReader : TextReader
+		{
+			private readonly string _s;
+			private readonly int _maxIndex;
+			private int _index;
+
+			public SubstringReader(string s, int index, int count)
+			{
+				ArgChecker.AssertArgNotNull(s, nameof(s));
+				if (index < 0 || index > s.Length) throw new ArgumentOutOfRangeException(nameof(index));
+				if (count < 0 || index + count > s.Length) throw new ArgumentOutOfRangeException(nameof(count));
+
+				_s = s;
+				_index = index;
+				_maxIndex = index + count;
+			}
+
+			public override int Peek()
+			{
+				return _index < _maxIndex
+					? _s[_index]
+					: -1;
+			}
+
+			public override int Read()
+			{
+				return _index < _maxIndex
+					? _s[_index++]
+					: -1;
+			}
+
+			public override int Read(char[] buffer, int index, int count)
+			{
+				ArgChecker.AssertArgNotNull(buffer, nameof(buffer));
+				if (index < 0 || index > buffer.Length) throw new ArgumentOutOfRangeException(nameof(index));
+				if (count < 0 || index + count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(count));
+
+				count = Math.Min(count, _maxIndex - _index);
+				_s.CopyTo(_index, buffer, index, count);
+				_index += count;
+				return count;
+			}
+
+			public override int ReadBlock(char[] buffer, int index, int count)
+			{
+				return Read(buffer, index, count);
+			}
 		}
 	}
 }
