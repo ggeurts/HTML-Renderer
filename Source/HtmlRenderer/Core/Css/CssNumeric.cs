@@ -46,9 +46,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 
 		public override int GetHashCode()
 		{
-			return HashUtility.Hash(
-				_value.GetHashCode(),
-				CssEqualityComparer<string>.Default.GetHashCode(_unit));
+			return _unit == null
+				? _value.GetHashCode()
+				: HashUtility.Hash(
+					_value.GetHashCode(),
+					CssEqualityComparer<string>.Default.GetHashCode(_unit));
 		}
 
 		public override string ToString()

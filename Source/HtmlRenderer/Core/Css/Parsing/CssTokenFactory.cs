@@ -4,11 +4,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 	public class CssTokenFactory
 	{
-		private readonly CssStringTokenData _whiteSpaceData;
+		private readonly CssToken _whiteSpaceToken;
 
 		public CssTokenFactory()
 		{
-			_whiteSpaceData = new CssStringTokenData(" ");
+			_whiteSpaceToken = new CssStringToken(CssTokenType.Whitespace, " ");
 		}
 
 		public CssToken CreateToken(char ch)
@@ -31,43 +31,43 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 					break;
 			}
 
-			return new CssToken(tokenType, CssAsciiTokenData.Instance);
+			return new CssAsciiToken(tokenType);
 		}
 
 		public CssToken CreateIdentifierToken(string value)
 		{
-			return new CssToken(CssTokenType.Identifier, new CssStringTokenData(value));   
+			return new CssStringToken(CssTokenType.Identifier, value);   
 		}
 
 		public CssToken CreateFunctionToken(string name)
 		{
-			return new CssToken(CssTokenType.Function, new CssStringTokenData(name));
+			return new CssStringToken(CssTokenType.Function, name);
 		}
 
 		public CssToken CreateUrlToken(string value, bool isInvalid)
 		{
 			var tokenType = CssTokenType.Url;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
-			return new CssToken(tokenType, new CssStringTokenData(value));
+			return new CssStringToken(tokenType, value);
 		}
 
 		public CssToken CreateHashToken(string value, bool isIdentifier)
 		{
 			var tokenType = CssTokenType.Hash;
 			if (isIdentifier) tokenType |= CssTokenType.IdentifierType;
-			return new CssToken(tokenType, new CssStringTokenData(value));
+			return new CssStringToken(tokenType, value);
 		}
 
 		public CssToken CreateAtKeywordToken(string value)
 		{
-			return new CssToken(CssTokenType.AtKeyword, new CssStringTokenData(value));
+			return new CssStringToken(CssTokenType.AtKeyword, value);
 		}
 
 		public CssToken CreateStringToken(string value, bool isInvalid)
 		{
 			var tokenType = CssTokenType.QuotedString;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
-			return new CssToken(tokenType, new CssStringTokenData(value));
+			return new CssStringToken(tokenType, value);
 		}
 
 		public CssToken CreateNumericToken(bool isFloatingPoint, double value, string unit)
@@ -78,22 +78,22 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 					? CssTokenType.Percentage
 					: CssTokenType.Dimension;
 			if (isFloatingPoint) tokenType |= CssTokenType.FloatingPointType;
-			return new CssToken(tokenType, new CssTokenData<CssNumeric>(new CssNumeric(value, unit)));
+			return new CssToken<CssNumeric>(tokenType, new CssNumeric(value, unit));
 		}
 
 		public CssToken CreateOperatorToken(char ch)
 		{
-			return new CssToken(CssTokenType.MatchOperator | (CssTokenType)ch, CssOperatorTokenData.Instance);
+			return new CssOperatorToken(CssTokenType.MatchOperator | (CssTokenType)ch);
 		}
 
 		public CssToken CreateColumnToken()
 		{
-			return new CssToken(CssTokenType.Column, CssOperatorTokenData.Instance);
+			return new CssOperatorToken(CssTokenType.Column);
 		}
 
 		public CssToken CreateUnicodeRangeToken(int rangeStart, int rangeEnd)
 		{
-			return new CssToken(CssTokenType.UnicodeRange, new CssTokenData<CssUnicodeRange>(new CssUnicodeRange(rangeStart, rangeEnd)));
+			return new CssToken<CssUnicodeRange>(CssTokenType.UnicodeRange, new CssUnicodeRange(rangeStart, rangeEnd));
 		}
 
 		//public CssToken CreateCommentToken(int startPos, int length)
@@ -103,17 +103,17 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 		public CssToken CreateCdoToken()
 		{
-			return new CssToken(CssTokenType.CDO, new CssStringTokenData("<!--"));
+			return new CssStringToken(CssTokenType.CDO, "<!--");
 		}
 
 		public CssToken CreateCdcToken()
 		{
-			return new CssToken(CssTokenType.CDC, new CssStringTokenData("-->"));
+			return new CssStringToken(CssTokenType.CDC, "-->");
 		}
 
 		public CssToken CreateWhitespaceToken()
 		{
-			return new CssToken(CssTokenType.Whitespace, _whiteSpaceData);
+			return _whiteSpaceToken;
 		}
 	}
 }

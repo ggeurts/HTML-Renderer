@@ -25,8 +25,7 @@
 		/// <summary>
 		/// A map of tokens to components to reduce CssSimpleComponent memory allocations
 		/// </summary>
-		private readonly Dictionary<CssToken, CssValue> _componentTable = 
-			new Dictionary<CssToken, CssValue>(CssToken.TokenValueComparer);
+		private readonly Dictionary<CssToken, CssValue> _componentTable = new Dictionary<CssToken, CssValue>();
 
 		#endregion
 

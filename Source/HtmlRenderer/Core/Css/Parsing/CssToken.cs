@@ -1,23 +1,18 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
-	using System.Collections.Generic;
-	using System.Diagnostics.CodeAnalysis;
+	using System;
+	using System.Globalization;
+	using System.Text;
 	using TheArtOfDev.HtmlRenderer.Core.Css;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	public struct CssToken
+	public abstract class CssToken
 	{
-		public static readonly EqualityComparer<CssToken> TokenValueComparer = new CssTokenValueEqualityComparer();
-
 		private readonly CssTokenType _tokenType;
-		private readonly CssTokenData _data;
 
-		internal CssToken(CssTokenType tokenType, CssTokenData data)
+		internal CssToken(CssTokenType tokenType)
 		{
-			ArgChecker.AssertArgNotNull(data, nameof(data));
-
 			_tokenType = tokenType;
-			_data = data;
 		}
 
 		public CssTokenType TokenType
@@ -27,17 +22,17 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 		public CssNumeric? NumericValue
 		{
-			get { return (_data as CssTokenData<CssNumeric>)?.Value; }
+			get { return (this as CssToken<CssNumeric>)?.Value; }
 		}
 
 		public string StringValue
 		{
-			get { return (_data as CssStringTokenData)?.GetValue(ref this); }
+			get { return (this as CssStringToken)?.Value; }
 		}
 
 		public CssUnicodeRange? UnicodeRangeValue
 		{
-			get { return (_data as CssTokenData<CssUnicodeRange>)?.Value; }
+			get { return (this as CssToken<CssUnicodeRange>)?.Value; }
 		}
 
 		public bool IsInvalid
@@ -91,32 +86,147 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 				&& _tokenType == (CssTokenType.Delimiter | (CssTokenType)value);
 		}
 
-		internal CssValue CreateComponent()
+		public abstract override string ToString();
+
+		public override bool Equals(object obj)
 		{
-			return _data?.CreateComponent(ref this);
+			var other = obj as CssToken;
+			return other != null
+			    && _tokenType == other._tokenType;
 		}
 
-		[SuppressMessage("ReSharper", "AssignNullToNotNullAttribute")]
+		public override int GetHashCode()
+		{
+			return (int)_tokenType;
+		}
+
+		internal abstract CssValue CreateComponent();
+	}
+
+	public sealed class CssToken<T> : CssToken 
+		where T: struct, IEquatable<T>, IFormattable
+	{
+		private readonly T _value;
+
+		public CssToken(CssTokenType tokenType, T value)
+			: base(tokenType)
+		{
+			_value = value;
+		}
+		public T Value
+		{
+			get { return _value; }
+		}
 		public override string ToString()
 		{
-			return _data?.ToString(ref this);
+			return _value.ToString(null, CultureInfo.InvariantCulture);
 		}
 
-		private class CssTokenValueEqualityComparer : EqualityComparer<CssToken>
+		public override bool Equals(object obj)
 		{
-			public override bool Equals(CssToken x, CssToken y)
-			{
-				return x._tokenType == y._tokenType
-				    && x._data.Equals(ref x, ref y, y._data);
-			}
+			var otherToken = obj as CssToken<T>;
+			return otherToken != null
+				&& this.TokenType == otherToken.TokenType
+				&& _value.Equals(otherToken._value);
+		}
 
-			public override int GetHashCode(CssToken obj)
+		public override int GetHashCode()
+		{
+			return HashUtility.Hash((int) this.TokenType, _value.GetHashCode());
+		}
+
+		internal override CssValue CreateComponent()
+		{
+			return new CssValue<T>(this.TokenType, _value);
+		}
+	}
+
+	public sealed class CssAsciiToken : CssToken
+	{
+		public CssAsciiToken(CssTokenType tokenType)
+			: base(tokenType)
+		{ }
+
+		public char Value
+		{
+			get { return (char) ((int) this.TokenType & 0xFF); }
+		}
+
+		public override string ToString()
+		{
+			return new string(this.Value, 1);
+		}
+
+		internal override CssValue CreateComponent()
+		{
+			return this.IsWhitespace
+				? CssValue.Whitespace
+				: new CssValue<char>(this.TokenType, this.Value);
+		}
+	}
+
+	internal sealed class CssOperatorToken : CssToken
+	{
+		public CssOperatorToken(CssTokenType tokenType)
+			: base(tokenType)
+		{ }
+
+		public override string ToString()
+		{
+			switch (this.TokenType)
 			{
-				return obj._data != null
-					? HashUtility.Hash((int)obj._tokenType, obj._data.GetHashCode())
-					: (int)obj._tokenType;
+				case CssTokenType.Column:
+					return "||";
+				default:
+					return new StringBuilder(2).Append((char)((int)this.TokenType & 0xFF)).Append('=').ToString();
 			}
 		}
 
+		internal override CssValue CreateComponent()
+		{
+			return new CssValue<string>(this.TokenType, ToString());
+		}
+	}
+
+	internal sealed class CssStringToken : CssToken
+	{
+		private readonly string _value;
+
+		public CssStringToken(CssTokenType tokenType, string value)
+			: base(tokenType)
+		{
+			ArgChecker.AssertArgNotNull(value, nameof(value));
+			_value = value;
+		}
+
+		public string Value
+		{
+			get { return _value; }
+		}
+
+		public override string ToString()
+		{
+			return _value;
+		}
+
+		public override bool Equals(object obj)
+		{
+			var other = obj as CssStringToken;
+			return other != null
+				&& this.TokenType == other.TokenType
+				&& CssEqualityComparer<string>.Default.Equals(_value, other._value);
+		}
+
+		public override int GetHashCode()
+		{
+			return HashUtility.Hash(base.GetHashCode(), CssEqualityComparer<string>.Default.GetHashCode(_value));
+		}
+
+		internal override CssValue CreateComponent()
+		{
+			return this.IsWhitespace
+				? CssValue.Whitespace
+				: new CssValue<string>(this.TokenType, _value);
+		}
 	}
 }

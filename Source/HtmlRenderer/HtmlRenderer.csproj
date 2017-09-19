@@ -115,7 +115,6 @@
     <Compile Include="Core\Parse\CssParser.cs" />
     <Compile Include="Core\Css\Parsing\CssParser.cs" />
     <Compile Include="Core\Css\Parsing\CssToken.cs" />
-    <Compile Include="Core\Css\Parsing\CssTokenData.cs" />
     <Compile Include="Core\Css\Parsing\CssTokenFactory.cs" />
     <Compile Include="Core\Css\Parsing\CssTokenizer.cs" />
     <Compile Include="Core\Css\Parsing\CssTokenType.cs" />
