@@ -27,7 +27,7 @@
 		[Test]
 		public void CanTokenizeString()
 		{
-			VerifyTokens(CssTokenizer.Tokenize("body { margin:0 }"),
+			VerifyTokens(new CssTokenizer(new CssReader( "body { margin:0 }")).Tokenize(),
 				Identifier("body"), WhiteSpace,
 				LeftCurlyBracket,
 				WhiteSpace, Identifier("margin"), Colon, NumberLiteral(0), WhiteSpace,
@@ -41,7 +41,7 @@
 			var index = xml.IndexOf("body", StringComparison.Ordinal);
 			var count = xml.IndexOf("</style>", StringComparison.Ordinal) - index;
 
-			VerifyTokens(CssTokenizer.Tokenize("<style>body { margin:0 }</style>", index, count),
+			VerifyTokens(new CssTokenizer(new CssReader("<style>body { margin:0 }</style>", index, count)).Tokenize(),
 				Identifier("body"), WhiteSpace,
 				LeftCurlyBracket,
 				WhiteSpace, Identifier("margin"), Colon, NumberLiteral(0), WhiteSpace,
@@ -51,7 +51,7 @@
 		[Test]
 		public void CanTokenizeTextReader()
 		{
-			VerifyTokens(CssTokenizer.Tokenize(new StringReader("body { margin:0 }")),
+			VerifyTokens(new CssTokenizer(new CssReader(new StringReader("body { margin:0 }"))).Tokenize(),
 				Identifier("body"), WhiteSpace,
 				LeftCurlyBracket,
 				WhiteSpace, Identifier("margin"), Colon, NumberLiteral(0), WhiteSpace,
@@ -480,7 +480,7 @@
 
 		private static void VerifyTokenizer(string css, params TokenData[] expectedTokens)
 		{
-			VerifyTokens(CssTokenizer.Tokenize(css), expectedTokens);
+			VerifyTokens(new CssTokenizer(new CssReader(css)).Tokenize(), expectedTokens);
 		}
 
 		private static void VerifyTokens(IEnumerable<CssToken> actualTokens, params TokenData[] expectedTokens)

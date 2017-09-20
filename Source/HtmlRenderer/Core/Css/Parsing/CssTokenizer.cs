@@ -14,41 +14,30 @@
 		private const char REPLACEMENT_CHAR = (char)0xFFFD;
 
 		private readonly CssReader _reader;
-		private readonly CssTokenFactory _factory;
+		private readonly CssTokenizerSettings _settings;
 		private readonly StringBuilder _valueBuilder = new StringBuilder();
 		private int _lineCount;
 		private int _linePos;
 
 		public EventHandler<CssErrorEventArgs> ParseError = delegate {};
 
-		private CssTokenizer(CssReader reader)
+		public CssTokenizer(CssReader reader)
+			: this(reader, null)
+		{}
+
+		public CssTokenizer(CssReader reader, CssTokenizerSettings settings)
 		{
 			ArgChecker.AssertArgNotNull(reader, nameof(reader));
 			_reader = reader;
-			_factory = new CssTokenFactory();
+			_settings = settings ?? new CssTokenizerSettings();
 		}
 
-		public static IEnumerable<CssToken> Tokenize(string input)
+		private CssTokenFactory TokenFactory
 		{
-			ArgChecker.AssertArgNotNull(input, nameof(input));
-			return input != null 
-				? new CssTokenizer(new CssReader(input)).Tokenize()
-				: Enumerable.Empty<CssToken>();
+			get { return _settings.TokenFactory; }
 		}
 
-		public static IEnumerable<CssToken> Tokenize(string input, int start, int count)
-		{
-			return new CssTokenizer(new CssReader(input, start, count)).Tokenize();
-		}
-
-		public static IEnumerable<CssToken> Tokenize(TextReader textReader)
-		{
-			ArgChecker.AssertArgNotNull(textReader, nameof(textReader));
-			return new CssTokenizer(new CssReader(textReader)).Tokenize();
-		}
-
-
-		private IEnumerable<CssToken> Tokenize()
+		public IEnumerable<CssToken> Tokenize()
 		{
 			CssToken token = default(CssToken);
 
@@ -74,7 +63,7 @@
 					case ')':
 					case ']':
 					case '}':
-						yield return _factory.CreateToken((char)_reader.Read());
+						yield return TokenFactory.CreateToken((char)_reader.Read());
 						continue;
 
 					case '\'':
@@ -88,15 +77,15 @@
 						string hashNameOrIdentifier;
 						if (TryConsumeIdentifier(out hashNameOrIdentifier))
 						{
-							yield return _factory.CreateHashToken(hashNameOrIdentifier, true);
+							yield return TokenFactory.CreateHashToken(hashNameOrIdentifier, true);
 						}
 						else if (TryConsumeName(out hashNameOrIdentifier))
 						{
-							yield return _factory.CreateHashToken(hashNameOrIdentifier, false);
+							yield return TokenFactory.CreateHashToken(hashNameOrIdentifier, false);
 						}
 						else
 						{
-							yield return _factory.CreateToken((char)ch);
+							yield return TokenFactory.CreateToken((char)ch);
 						}
 						continue;
 
@@ -106,8 +95,8 @@
 					case '~':
 						_reader.Read();
 						yield return _reader.TryRead("=") 
-							? _factory.CreateOperatorToken((char) ch) 
-							: _factory.CreateToken((char) ch);
+							? TokenFactory.CreateOperatorToken((char) ch) 
+							: TokenFactory.CreateToken((char) ch);
 						continue;
 
 					case '+':
@@ -118,7 +107,7 @@
 							continue;
 						}
 
-						yield return _factory.CreateToken((char) _reader.Read());
+						yield return TokenFactory.CreateToken((char) _reader.Read());
 						continue;
 
 					case '-':
@@ -129,22 +118,22 @@
 						}
 
 						yield return _reader.TryRead("-->")
-							? _factory.CreateCdcToken()
-							: _factory.CreateToken((char) _reader.Read());
+							? TokenFactory.CreateCdcToken()
+							: TokenFactory.CreateToken((char) _reader.Read());
 						continue;
 
 					case '/':
 						string comment;
 						if (!TryConsumeComment(out comment))
 						{
-							yield return _factory.CreateToken((char)_reader.Read());
+							yield return TokenFactory.CreateToken((char)_reader.Read());
 						}
 						continue;
 
 					case '<':
 						yield return _reader.TryRead("<!--") 
-							? _factory.CreateCdoToken() 
-							: _factory.CreateToken((char)_reader.Read());
+							? TokenFactory.CreateCdoToken() 
+							: TokenFactory.CreateToken((char)_reader.Read());
 						continue;
 
 					case '@':
@@ -152,8 +141,8 @@
 
 						string identifier;
 						yield return TryConsumeIdentifier(out identifier)
-							? _factory.CreateAtKeywordToken(identifier)
-							: _factory.CreateToken((char) ch);
+							? TokenFactory.CreateAtKeywordToken(identifier)
+							: TokenFactory.CreateToken((char) ch);
 						continue;
 
 					case '\\':
@@ -165,7 +154,7 @@
 
 						NotifyError("Invalid escape sequence.");
 
-						yield return _factory.CreateToken((char) _reader.Read());
+						yield return TokenFactory.CreateToken((char) _reader.Read());
 						continue;
 
 					case '|':
@@ -173,15 +162,15 @@
 						switch (_reader.Peek())
 						{
 							case '=':
-								yield return _factory.CreateOperatorToken((char) ch);
+								yield return TokenFactory.CreateOperatorToken((char) ch);
 								_reader.Read();
 								break;
 							case '|':
-								yield return _factory.CreateColumnToken();
+								yield return TokenFactory.CreateColumnToken();
 								_reader.Read();
 								break;
 							default:
-								yield return _factory.CreateToken((char) ch);
+								yield return TokenFactory.CreateToken((char) ch);
 								break;
 						}
 						continue;
@@ -212,7 +201,7 @@
 							continue;
 						}
 
-						yield return _factory.CreateToken((char)_reader.Read());
+						yield return TokenFactory.CreateToken((char)_reader.Read());
 						continue;
 				}
 			}
@@ -232,11 +221,11 @@
 				{
 					bool isInvalid;
 					var url = ConsumeUrl(out isInvalid);
-					return _factory.CreateUrlToken(url, isInvalid);
+					return TokenFactory.CreateUrlToken(url, isInvalid);
 				}
-				return _factory.CreateFunctionToken(name);
+				return TokenFactory.CreateFunctionToken(name);
 			}
-			return _factory.CreateIdentifierToken(name);
+			return TokenFactory.CreateIdentifierToken(name);
 		}
 
 		private CssToken ConsumeStringToken()
@@ -256,7 +245,7 @@
 					case '\r':
 					case '\f':
 						NotifyError("Unescaped newline character in quoted string literal.");
-						return _factory.CreateStringToken(BuildValue(), true);
+						return TokenFactory.CreateStringToken(BuildValue(), true);
 
 					case '\\':
 						var ch1 = _reader.Peek(1);
@@ -288,7 +277,7 @@
 				}
 			}
 
-			return _factory.CreateStringToken(BuildValue(), false);
+			return TokenFactory.CreateStringToken(BuildValue(), false);
 		}
 
 		private string ConsumeUrl(out bool isInvalid)
@@ -405,7 +394,7 @@
 			string identifier;
 			if (!TryConsumeIdentifier(out identifier)) return false;
 
-			result = _factory.CreateIdentifierToken(identifier);
+			result = TokenFactory.CreateIdentifierToken(identifier);
 			return true;
 		}
 
@@ -420,18 +409,18 @@
 
 			if (_reader.TryRead("%"))
 			{
-				result = _factory.CreateNumericToken(isFloatingPoint, value, "%");
+				result = TokenFactory.CreateNumericToken(isFloatingPoint, value, "%");
 				return true;
 			}
 
 			string identifier;
 			if (TryConsumeIdentifier(out identifier))
 			{
-				result = _factory.CreateNumericToken(isFloatingPoint, value, identifier);
+				result = TokenFactory.CreateNumericToken(isFloatingPoint, value, identifier);
 				return true;
 			}
 
-			result = _factory.CreateNumericToken(isFloatingPoint, value, null);
+			result = TokenFactory.CreateNumericToken(isFloatingPoint, value, null);
 			return true;
 		}
 
@@ -478,7 +467,7 @@
 				rangeEnd = int.Parse(hexNumber, NumberStyles.AllowHexSpecifier);
 			}
 
-			return _factory.CreateUnicodeRangeToken(rangeStart, rangeEnd);
+			return TokenFactory.CreateUnicodeRangeToken(rangeStart, rangeEnd);
 		}
 
 		private CssToken ConsumeWhitespaceToken()

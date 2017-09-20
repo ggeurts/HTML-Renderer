@@ -24,14 +24,14 @@
 
 		#region Constructor(s)
 
-		public CssParser(IEnumerable<CssToken> tokens)
-			: this(null, tokens)
+		public CssParser(CssTokenizer tokenizer)
+			: this(tokenizer, null)
 		{}
 
-		public CssParser(CssGrammar grammar, IEnumerable<CssToken> tokens)
+		public CssParser(CssTokenizer tokenizer, CssGrammar grammar)
 		{
-			ArgChecker.AssertArgNotNull(tokens, nameof(tokens));
-			_rootScope = new RootScope(tokens.GetEnumerator(), grammar ?? DefaultGrammar);
+			ArgChecker.AssertArgNotNull(tokenizer, nameof(tokenizer));
+			_rootScope = new RootScope(tokenizer.Tokenize().GetEnumerator(), grammar ?? DefaultGrammar);
 		}
 
 		#endregion
@@ -429,7 +429,7 @@
 		private abstract class ChildScope : Scope
 		{
 			private readonly Scope _parent;
-			private int _state = 0;
+			private int _state;
 
 			protected ChildScope(Scope parent, CssGrammar grammar)
 				: base(grammar)

@@ -15,7 +15,7 @@
 		[TestCaseSource(nameof(SingleValueTestCases))]
 		public void ParseComponent_Value(string css, CssComponent expectedBlock)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var component = parser.ParseComponent();
 			Assert.That(component, Is.EqualTo(expectedBlock));
 		}
@@ -24,7 +24,7 @@
 		[TestCaseSource(nameof(SingleBlockTestCases))]
 		public void ParseComponent_Block(string css, CssBlock expectedBlock)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var component = parser.ParseComponent();
 			Assert.That(component, Is.EqualTo(expectedBlock));
 		}
@@ -37,7 +37,7 @@
 		[TestCaseSource(nameof(SingleValueTestCases))]
 		public void ParseComponentList_SingleValue(string css, CssToken expectedComponent)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var componentList = parser.ParseComponentList().ToList();
 			Assert.That(componentList, Is.EquivalentTo(new[] { expectedComponent }));
 		}
@@ -46,7 +46,7 @@
 		[TestCaseSource(nameof(SingleBlockTestCases))]
 		public void ParseComponentList_SingleBlock(string css, CssBlock expectedBlock)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var componentList = parser.ParseComponentList().ToList();
 			Assert.That(componentList, Is.EquivalentTo(new[] { expectedBlock }));
 		}
@@ -55,7 +55,7 @@
 		[TestCaseSource(nameof(TwoValuesTestCases))]
 		public void ParseComponentList_MultipleValues(string css, CssToken[] expectedComponents)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var componentList = parser.ParseComponentList().ToList();
 			Assert.That(componentList, Is.EquivalentTo(expectedComponents));
 		}
@@ -64,7 +64,7 @@
 		[TestCaseSource(nameof(MultipleComponentTestCases))]
 		public void ParseComponentList_MultipleComponents(string css, CssComponent[] expectedComponents)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var componentList = parser.ParseComponentList().ToList();
 			Assert.That(componentList, Is.EquivalentTo(expectedComponents));
 		}
@@ -77,7 +77,7 @@
 		[TestCaseSource(nameof(SingleDeclarationTestCases))]
 		public void ParseDeclaration(string css, CssComponent expectedDeclaration)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var declaration = parser.ParseDeclaration();
 			Assert.That(declaration, Is.EqualTo(expectedDeclaration));
 		}
@@ -90,7 +90,7 @@
 		[TestCaseSource(nameof(SingleDeclarationTestCases))]
 		public void ParseDeclarationList_SingleDeclaration(string css, CssComponent expectedDeclaration)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var declarations = parser.ParseDeclarationList().ToList();
 			Assert.That(declarations, Is.EquivalentTo(new[] { expectedDeclaration }));
 		}
@@ -101,7 +101,7 @@
 			var css = @"
 				font: sans-serif black 10pt !important;
 				border: 1px silver solid";
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var declarations = parser.ParseDeclarationList().ToList();
 			Assert.That(declarations, Is.EquivalentTo(new[]
 			{
@@ -133,7 +133,7 @@
 		[TestCaseSource(nameof(SingleAtRuleTestCases))]
 		public void ParseDeclarationList_SingleAtRule(string css, CssNode expectedDeclaration)
 		{
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var declarations = parser.ParseDeclarationList().ToList();
 			Assert.That(declarations, Is.EquivalentTo(new[] { expectedDeclaration }));
 		}
@@ -144,7 +144,7 @@
 			var css = @"
 				font: sans-serif black 10pt !important;
 				@page { margin: 2.5cm }";
-			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var parser = CreateParser(css);
 			var declarations = parser.ParseDeclarationList().ToList();
 			Assert.That(declarations, Is.EquivalentTo(new CssComponent[]
 			{
@@ -257,7 +257,7 @@
 						case 1:
 							blockType = CssBlockType.SquareBrackets;
 							break;
-						case 2:
+						default:
 							blockType = CssBlockType.Parentheses;
 							break;
 					}
@@ -409,6 +409,15 @@
 								}, false)
 						})));
 			}
+		}
+
+		#endregion
+
+		#region Factory methods
+
+		private static CssParser CreateParser(string css)
+		{
+			return new CssParser(new CssTokenizer(new CssReader(css)));
 		}
 
 		#endregion

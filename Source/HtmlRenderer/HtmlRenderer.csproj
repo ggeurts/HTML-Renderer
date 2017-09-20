@@ -55,6 +55,7 @@
     <Compile Include="Core\Css\Parsing\CssGrammar.cs" />
     <Compile Include="Core\Css\Parsing\CssReader.cs" />
     <Compile Include="Core\Css\Parsing\CssStylesheetGrammar.cs" />
+    <Compile Include="Core\Css\Parsing\CssTokenizerSettings.cs" />
     <Compile Include="Core\Entities\CssPageRuleCollection.cs" />
     <Compile Include="Core\Entities\CssBlockCollection.cs" />
     <Compile Include="Core\CssDefaults.cs" />
