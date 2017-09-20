@@ -78,13 +78,98 @@
 		public void ParseDeclaration(string css, CssComponent expectedDeclaration)
 		{
 			var parser = new CssParser(CssTokenizer.Tokenize(css));
-			var component = parser.ParseDeclaration();
-			Assert.That(component, Is.EqualTo(expectedDeclaration));
+			var declaration = parser.ParseDeclaration();
+			Assert.That(declaration, Is.EqualTo(expectedDeclaration));
 		}
 
 		#endregion
 
 		#region ParseDeclarationList tests
+
+		[Test]
+		[TestCaseSource(nameof(SingleDeclarationTestCases))]
+		public void ParseDeclarationList_SingleDeclaration(string css, CssComponent expectedDeclaration)
+		{
+			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var declarations = parser.ParseDeclarationList().ToList();
+			Assert.That(declarations, Is.EquivalentTo(new[] { expectedDeclaration }));
+		}
+
+		[Test]
+		public void ParseDeclarationList_MultipleDeclarations()
+		{
+			var css = @"
+				font: sans-serif black 10pt !important;
+				border: 1px silver solid";
+			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var declarations = parser.ParseDeclarationList().ToList();
+			Assert.That(declarations, Is.EquivalentTo(new[]
+			{
+				new CssDeclaration("font", new[]
+					{
+						CssToken.Whitespace,
+						new CssStringToken(CssTokenType.Identifier, "sans-serif"),
+						CssToken.Whitespace,
+						new CssStringToken(CssTokenType.Identifier, "black"),
+						CssToken.Whitespace,
+						new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(10, "pt")),
+						CssToken.Whitespace,
+					},
+					true),
+				new CssDeclaration("border", new[]
+					{
+						CssToken.Whitespace,
+						new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(1, "px")),
+						CssToken.Whitespace,
+						new CssStringToken(CssTokenType.Identifier, "silver"),
+						CssToken.Whitespace,
+						new CssStringToken(CssTokenType.Identifier, "solid"),
+					},
+					true),
+			}));
+		}
+
+		[Test]
+		[TestCaseSource(nameof(SingleAtRuleTestCases))]
+		public void ParseDeclarationList_SingleAtRule(string css, CssNode expectedDeclaration)
+		{
+			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var declarations = parser.ParseDeclarationList().ToList();
+			Assert.That(declarations, Is.EquivalentTo(new[] { expectedDeclaration }));
+		}
+
+		[Test]
+		public void ParseDeclarationList_DeclarationAndAtRule()
+		{
+			var css = @"
+				font: sans-serif black 10pt !important;
+				@page { margin: 2.5cm }";
+			var parser = new CssParser(CssTokenizer.Tokenize(css));
+			var declarations = parser.ParseDeclarationList().ToList();
+			Assert.That(declarations, Is.EquivalentTo(new CssComponent[]
+			{
+				new CssDeclaration("font", new[]
+					{
+						CssToken.Whitespace,
+						new CssStringToken(CssTokenType.Identifier, "sans-serif"),
+						CssToken.Whitespace,
+						new CssStringToken(CssTokenType.Identifier, "black"),
+						CssToken.Whitespace,
+						new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(10, "pt")),
+						CssToken.Whitespace,
+					},
+					true),
+				new CssAtRule("page", CssToken.Whitespace, new CssBlock(CssBlockType.CurlyBrackets, new[]
+					{
+						new CssDeclaration("margin", new[]
+						{
+							CssToken.Whitespace,
+							new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(2.5, "cm")),
+							CssToken.Whitespace,
+						}, false)
+					}))
+			}));
+		}
 
 		#endregion
 
@@ -306,6 +391,23 @@
 						CssToken.Whitespace,
 					},
 					true));
+			}
+		}
+
+		public static IEnumerable<TestCaseData> SingleAtRuleTestCases
+		{
+			get
+			{
+				yield return new TestCaseData("@page { margin: 2cm }", 
+					new CssAtRule("page", CssToken.Whitespace, new CssBlock(CssBlockType.CurlyBrackets, new[]
+						{
+							new CssDeclaration("margin", new[]
+								{
+									CssToken.Whitespace,
+									new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(2, "cm")),
+									CssToken.Whitespace,
+								}, false)
+						})));
 			}
 		}
 

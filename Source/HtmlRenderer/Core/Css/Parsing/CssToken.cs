@@ -152,10 +152,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 		public override bool Equals(object obj)
 		{
-			var otherToken = obj as CssToken<T>;
-			return otherToken != null
-				&& this.TokenType == otherToken.TokenType
-				&& _value.Equals(otherToken._value);
+			var other = obj as CssToken<T>;
+			return other != null
+				&& this.TokenType == other.TokenType
+				&& _value.Equals(other._value);
 		}
 
 		public override int GetHashCode()

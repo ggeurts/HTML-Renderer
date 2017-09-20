@@ -27,9 +27,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 
 		public override bool Equals(object obj)
 		{
-			var otherBlock = obj as CssBlock;
-			return otherBlock != null
-				&& _blockType == otherBlock._blockType
+			var other = obj as CssBlock;
+			return other != null
+				&& _blockType == other._blockType
 				&& base.Equals(obj);
 		}
 

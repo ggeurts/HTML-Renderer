@@ -1,18 +1,24 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
-	using System.Collections.Immutable;
+	using System;
+	using System.Collections.Generic;
 
 	public class CssStylesheetGrammar : CssGrammar
 	{
-		public override CssBlock ConsumeQualifiedRuleBlock(CssParser.FragmentParser parser)
+		public override CssGrammar GetAtRuleGrammar(string name)
 		{
-			var declarations = ImmutableArray.CreateBuilder<CssDeclaration>();
-			do
-			{
-				declarations.Add(parser.ConsumeDeclaration(this));
-			} while (parser.MoveNext());
+			if (name == "page") return this;
+			return base.GetAtRuleGrammar(name);
+		}
 
-			return new CssBlock(CssBlockType.CurlyBrackets, declarations.ToImmutable().CastArray<CssComponent>());
+		public override IEnumerable<CssComponent> ParseQualifiedRuleBlock(CssParser.Scope parser)
+		{
+			return parser.ParseDeclarationList();
+		}
+
+		public override IEnumerable<CssComponent> ParseAtRuleBlock(CssParser.Scope parser)
+		{
+			return parser.ParseDeclarationList();
 		}
 	}
 }

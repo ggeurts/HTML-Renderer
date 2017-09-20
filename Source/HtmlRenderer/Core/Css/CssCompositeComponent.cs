@@ -22,10 +22,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 
 		public override bool Equals(object obj)
 		{
-			var otherComposite = obj as CssCompositeComponent;
-			return otherComposite != null
-			    && _components.Count == otherComposite._components.Count
-				&& _components.SequenceEqual(otherComposite._components);
+			var other = obj as CssCompositeComponent;
+			return other != null
+			    && _components.Count == other._components.Count
+				&& _components.SequenceEqual(other._components);
 		}
 
 		public override int GetHashCode()

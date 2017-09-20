@@ -1,5 +1,6 @@
 ﻿namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
+	using System.Collections.Generic;
 	using System.Collections.Immutable;
 	using TheArtOfDev.HtmlRenderer.Core.Css;
 
@@ -8,44 +9,29 @@
 	/// </summary>
 	public class CssGrammar
 	{
-		public virtual CssComponent ConsumeQualifiedRulePrelude(CssParser.FragmentParser parser)
+		public virtual CssGrammar GetAtRuleGrammar(string name)
 		{
-			var firstComponent = parser.CurrentToken;
-			if (!parser.MoveNext()) return firstComponent;
-
-			var components = ImmutableArray.CreateBuilder<CssComponent>();
-			components.Add(firstComponent);
-			do
-			{
-				components.Add(parser.CurrentToken);
-			} while (parser.MoveNext());
-
-			return new CssCompositeComponent(components.ToImmutable());
+			return null;
 		}
 
-		public virtual CssBlock ConsumeQualifiedRuleBlock(CssParser.FragmentParser parser)
+		public virtual CssComponent ParseQualifiedRulePrelude(CssParser.Scope parser)
 		{
-			return parser.ConsumeSimpleBlock(CssBlockType.CurlyBrackets);
+			return ParsePrelude(parser);
 		}
 
-		public virtual CssComponent ConsumeAtRulePrelude(string name, CssParser.FragmentParser parser)
+		public virtual IEnumerable<CssComponent> ParseQualifiedRuleBlock(CssParser.Scope parser)
 		{
-			var firstComponent = parser.CurrentToken;
-			if (!parser.MoveNext()) return firstComponent;
-
-			var components = ImmutableArray.CreateBuilder<CssComponent>();
-			components.Add(firstComponent);
-			do
-			{
-				components.Add(parser.CurrentToken);
-			} while (parser.MoveNext());
-
-			return new CssCompositeComponent(components.ToImmutable());
+			return parser.ParseComponentList();
 		}
 
-		public virtual CssBlock ConsumeAtRuleBlock(string name, CssParser.FragmentParser parser)
+		public virtual CssComponent ParseAtRulePrelude(CssParser.Scope parser)
 		{
-			return parser.ConsumeSimpleBlock(CssBlockType.CurlyBrackets);
+			return ParsePrelude(parser);
+		}
+
+		public virtual IEnumerable<CssComponent> ParseAtRuleBlock(CssParser.Scope parser)
+		{
+			return parser.ParseComponentList();
 		}
 
 		public virtual CssQualifiedRule CreateQualifiedRule(CssComponent prelude, CssBlock block)
@@ -67,5 +53,25 @@
 		{
 			return new CssFunction(name, components);
 		}
- 	}
+
+		private static CssComponent ParsePrelude(CssParser.Scope parser)
+		{
+			using (var componentsEnum = parser.ParseComponentList().GetEnumerator())
+			{
+				if (!componentsEnum.MoveNext()) return CssComponent.Empty;
+
+				var firstComponent = componentsEnum.Current;
+				if (!componentsEnum.MoveNext()) return firstComponent;
+
+				var components = ImmutableArray.CreateBuilder<CssComponent>();
+				components.Add(firstComponent);
+				do
+				{
+					components.Add(componentsEnum.Current);
+				} while (componentsEnum.MoveNext());
+
+				return new CssCompositeComponent(components.ToImmutable());
+			}
+		}
+	}
 }

@@ -47,11 +47,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 
 		public override bool Equals(object obj)
 		{
-			var otherDeclaration = obj as CssDeclaration;
-			return otherDeclaration != null
-				&& CssEqualityComparer<string>.Default.Equals(_name, otherDeclaration._name)
-			    && _values.Length == otherDeclaration._values.Length
-				&& _values.SequenceEqual(otherDeclaration._values);
+			var other = obj as CssDeclaration;
+			return other != null
+				&& CssEqualityComparer<string>.Default.Equals(_name, other._name)
+			    && _values.Length == other._values.Length
+				&& _values.SequenceEqual(other._values);
 		}
 
 		public override int GetHashCode()
