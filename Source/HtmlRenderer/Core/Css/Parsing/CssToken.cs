@@ -199,7 +199,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		}
 	}
 
-	public sealed class CssStringToken : CssToken
+	public class CssStringToken : CssToken
 	{
 		private readonly string _value;
 
@@ -217,20 +217,37 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 		public override string ToString()
 		{
-			return _value;
+			return this.IsQuotedString 
+				? "\"" + _value.Replace("\"", "\\\"") + "\"" 
+				: _value;
+		}
+
+		public override void ToString(StringBuilder sb)
+		{
+			if (this.IsQuotedString)
+			{
+				sb.Append('"')
+					.Append(_value)
+					.Replace("\"", "\\\"", 1, _value.Length)
+					.Append('"');
+			}
+			else
+			{
+				sb.Append(_value);
+			}
 		}
 
 		public override bool Equals(object obj)
 		{
 			var other = obj as CssStringToken;
 			return other != null
-				&& this.TokenType == other.TokenType
-				&& CssEqualityComparer<string>.Default.Equals(_value, other._value);
+			    && this.TokenType == other.TokenType
+			    && _value == other._value;
 		}
 
 		public override int GetHashCode()
 		{
-			return HashUtility.Hash(base.GetHashCode(), CssEqualityComparer<string>.Default.GetHashCode(_value));
+			return HashUtility.Hash((int)this.TokenType, _value.GetHashCode());
 		}
 	}
 }
