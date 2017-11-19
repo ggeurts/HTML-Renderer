@@ -17,7 +17,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		Delimiter = 0x10000,
 		MatchOperator = 0x20000,
 		Column = 0x40000,
-		UnicodeRange = 0x80000,
+		//UnicodeRange = 0x80000,
 		Hash = 0x100000,
 		AtKeyword = 0x200000,
 		//Comment = 0x1000000,

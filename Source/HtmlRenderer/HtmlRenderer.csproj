@@ -54,6 +54,7 @@
     <Compile Include="Core\Css\CssNode.cs" />
     <Compile Include="Core\Css\Parsing\CssError.cs" />
     <Compile Include="Core\Css\Parsing\CssGrammar.cs" />
+    <Compile Include="Core\Css\Parsing\CssParserExtensions.cs" />
     <Compile Include="Core\Css\Parsing\CssReader.cs" />
     <Compile Include="Core\Css\Parsing\CssStylesheetGrammar.cs" />
     <Compile Include="Core\Css\Parsing\CssTokenizerSettings.cs" />
@@ -65,7 +66,6 @@
     <Compile Include="Core\Css\Selectors\CssDynamicPseudoClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssEmptyPseudoClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssIdSelector.cs" />
-    <Compile Include="Core\Css\Selectors\CssMatchBehavior.cs" />
     <Compile Include="Core\Css\Selectors\CssAttributeMatchOperator.cs" />
     <Compile Include="Core\Css\Selectors\CssNotPseudoClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssNthChildPseudoClassSelector.cs" />
@@ -190,7 +190,9 @@
       <Version>1.4.0</Version>
     </PackageReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Core\Css\Values\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

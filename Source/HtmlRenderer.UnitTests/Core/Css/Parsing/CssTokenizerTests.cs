@@ -244,42 +244,26 @@
 		#region Unicode range tokens
 
 		[Test]
-		[TestCase(@"U+F")]
-		[TestCase(@"U+0F")]
-		[TestCase(@"U+00F")]
-		[TestCase(@"U+000F")]
-		[TestCase(@"U+0000F")]
-		[TestCase(@"U+00000F")]
-		[TestCase(@"U+F-F")]
-		[TestCase(@"U+0000F-0F")]
-		[TestCase(@"U+00F-00F")]
-		[TestCase(@"U+0F-000F")]
-		[TestCase(@"U+F-0000F")]
-		[TestCase(@"U+000F-00000F")]
-		public void TokenizeUnicodeRangeOfSingleChar(string css)
+		public void TokenizeUnicodeRangeWithoutQuestionMarks()
 		{
-			VerifyTokenizer(css, UnicodeRange(0xF));
+			VerifyTokenizer("u+a", Identifier("u"), Delimiter('+'), Identifier("a"));
+			VerifyTokenizer("u+0B", Identifier("u"), DimensionLiteral(0, "B"));
+			VerifyTokenizer("u+00C", Identifier("u"), DimensionLiteral(0, "C"));
+			VerifyTokenizer("u+d-d", Identifier("u"), Delimiter('+'), Identifier("d-d"));
+			VerifyTokenizer("u+0E-0E", Identifier("u"), DimensionLiteral(0, "E", true));
+			VerifyTokenizer("u+0F-0F", Identifier("u"), DimensionLiteral(0, "F-0F"));
+			VerifyTokenizer("u+1-1", Identifier("u"), NumberLiteral(1), NumberLiteral(-1));
+			VerifyTokenizer("u+20-3A", Identifier("u"), NumberLiteral(20), DimensionLiteral(-3, "A"));
+			VerifyTokenizer("u+3A-40", Identifier("u"), DimensionLiteral(3, "A-40"));
 		}
 
 		[Test]
-		[TestCase(@"U+1-2", 0x1, 0x2)]
-		[TestCase(@"U+10-2F", 0x10, 0x2F)]
-		[TestCase(@"U+100000-EEEEEE", 0x100000, 0xEEEEEE)]
-		[TestCase(@"U+F?", 0xF0, 0xFF)]
-		[TestCase(@"U+0F?", 0xF0, 0xFF)]
-		[TestCase(@"U+00F?", 0xF0, 0xFF)]
-		[TestCase(@"U+00F?", 0xF0, 0xFF)]
-		[TestCase(@"U+000F?", 0xF0, 0xFF)]
-		[TestCase(@"U+000F?", 0xF0, 0xFF)]
-		[TestCase(@"U+0000F?", 0xF0, 0xFF)]
-		[TestCase(@"U+FFFFF?", 0xFFFFF0, 0xFFFFFF)]
-		[TestCase(@"U+FFFF??", 0xFFFF00, 0xFFFFFF)]
-		[TestCase(@"U+FFF???", 0xFFF000, 0xFFFFFF)]
-		[TestCase(@"U+FF????", 0xFF0000, 0xFFFFFF)]
-		[TestCase(@"U+F?????", 0xF00000, 0xFFFFFF)]
-		public void TokenizeUnicodeRangeOfMultipleChars(string css, int start, int end)
+		public void TokenizeUnicodeRangeWithQuestionMarks()
 		{
-			VerifyTokenizer(css, UnicodeRange(start, end));
+			VerifyTokenizer("u+a?", Identifier("u"), Delimiter('+'), Identifier("a"), Delimiter('?'));
+			VerifyTokenizer("u+0B?", Identifier("u"), DimensionLiteral(0, "B"), Delimiter('?'));
+			VerifyTokenizer("u+00C??", Identifier("u"), DimensionLiteral(0, "C"), Delimiter('?'), Delimiter('?'));
+			VerifyTokenizer("u+1?", Identifier("u"), NumberLiteral(1), Delimiter('?'));
 		}
 
 		#endregion
@@ -288,13 +272,26 @@
 
 		[Test]
 		[TestCase("url(http://example.com/some.css)")]
-		[TestCase("url(\"http://example.com/some.css\")")]
-		[TestCase("url('http://example.com/some.css')")]
 		[TestCase("url( http://example.com/some.css )")]
-		[TestCase("url(\t 'http://example.com/some.css' \t)")]
 		public void TokenizeUrlToken(string css)
 		{
 			VerifyTokenizer(css, Url("http://example.com/some.css"));
+		}
+
+		[Test]
+		[TestCase("url(\"http://example.com/some.css\")")]
+		[TestCase("url('http://example.com/some.css')")]
+		public void TokenizeUrlFunctionTokenWithoutWhitespace(string css)
+		{
+			VerifyTokenizer(css, Function("url("), StringLiteral("http://example.com/some.css"), Delimiter(')'));
+		}
+
+		[Test]
+		[TestCase("url( \"http://example.com/some.css\" )")]
+		[TestCase("url( 'http://example.com/some.css' )")]
+		public void TokenizeUrlFunctionTokenWithWhitespace(string css)
+		{
+			VerifyTokenizer(css, Function("url("), WhiteSpace, StringLiteral("http://example.com/some.css"), WhiteSpace, Delimiter(')'));
 		}
 
 		#endregion
@@ -506,10 +503,6 @@
 						Assert.That(token.IsMatchOperator, Is.True, "[Token {0}]IsMatchOperator", tokenIndex);
 						Assert.That(token.StringValue, Is.EqualTo((char) expectedToken.Value + "="), "[Token {0}]RawValue", tokenIndex);
 						break;
-					case CssTokenType.UnicodeRange:
-						Assert.That(token.UnicodeRangeValue, Is.EqualTo((CssUnicodeRange) expectedToken.Value),
-							"[Token {0}]UnicodeRangeValue", tokenIndex);
-						break;
 					default:
 						if (token.IsNumber || token.IsDimension || token.IsPercentage)
 						{
@@ -532,12 +525,31 @@
 
 		private static TokenData Delimiter(char value)
 		{
-			return new TokenData(CssTokenType.Delimiter | (CssTokenType)(value & 0xFF));
+			switch (value)
+			{
+				case '(':
+				case ')':
+				case '[':
+				case ']':
+				case '{':
+				case '}':
+				case ',':
+				case ':':
+				case ';':
+					return new TokenData((CssTokenType)(value & 0xFF));
+				default:
+					return new TokenData(CssTokenType.Delimiter | (CssTokenType)(value & 0xFF));
+			}
 		}
 
 		private static TokenData DimensionLiteral(double value, string unit, bool isFloatingPoint = false)
 		{
 			return new TokenData(CssTokenType.Dimension | (isFloatingPoint ? CssTokenType.FloatingPointType : 0), new CssNumeric(value, unit));
+		}
+
+		private static TokenData Function(string value)
+		{
+			return new TokenData(CssTokenType.Function, value);
 		}
 
 		private static TokenData Hash(string value, bool isIdentifier = false)
@@ -568,16 +580,6 @@
 		private static TokenData Token(CssTokenType tokenType)
 		{
 			return new TokenData(tokenType);
-		}
-
-		private static TokenData UnicodeRange(int value)
-		{
-			return UnicodeRange(value, value);
-		}
-
-		private static TokenData UnicodeRange(int start, int end)
-		{
-			return new TokenData(CssTokenType.UnicodeRange, new CssUnicodeRange(start, end));
 		}
 
 		private static TokenData Url(string value, bool isValid = true)

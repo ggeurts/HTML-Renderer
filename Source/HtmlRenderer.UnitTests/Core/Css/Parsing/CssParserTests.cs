@@ -9,6 +9,12 @@
 	[TestFixture]
 	public class CssParserTests
 	{
+		#region Instance fields
+
+		private static readonly CssTokenFactory _tokenFactory = new CssTokenFactory();
+
+		#endregion
+
 		#region ParseComponent() Tests;
 
 		[Test]
@@ -108,22 +114,22 @@
 				new CssDeclaration("font", new[]
 					{
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "sans-serif"),
+						_tokenFactory.CreateIdentifierToken("sans-serif"),
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "black"),
+						_tokenFactory.CreateIdentifierToken("black"),
 						CssToken.Whitespace,
-						new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(10, "pt")),
+						_tokenFactory.CreateNumericToken(false, "10", "pt"),
 						CssToken.Whitespace,
 					},
 					true),
 				new CssDeclaration("border", new[]
 					{
 						CssToken.Whitespace,
-						new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(1, "px")),
+						_tokenFactory.CreateNumericToken(false, "1", "px"),
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "silver"),
+						_tokenFactory.CreateIdentifierToken("silver"),
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "solid"),
+						_tokenFactory.CreateIdentifierToken("solid"),
 					},
 					true),
 			}));
@@ -151,11 +157,11 @@
 				new CssDeclaration("font", new[]
 					{
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "sans-serif"),
+						_tokenFactory.CreateIdentifierToken("sans-serif"),
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "black"),
+						_tokenFactory.CreateIdentifierToken("black"),
 						CssToken.Whitespace,
-						new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(10, "pt")),
+						_tokenFactory.CreateNumericToken(false, "10", "pt"),
 						CssToken.Whitespace,
 					},
 					true),
@@ -164,7 +170,7 @@
 						new CssDeclaration("margin", new[]
 						{
 							CssToken.Whitespace,
-							new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(2.5, "cm")),
+							_tokenFactory.CreateNumericToken(true, "2.5", "cm"),
 							CssToken.Whitespace,
 						}, false)
 					}))
@@ -179,35 +185,35 @@
 		{
 			get
 			{
-				yield return new TestCaseData("id", new CssStringToken(CssTokenType.Identifier, "id"));
-				yield return new TestCaseData("\"some value\"", new CssStringToken(CssTokenType.QuotedString, "some value"));
-				yield return new TestCaseData("'other value'", new CssStringToken(CssTokenType.QuotedString, "other value"));
-				yield return new TestCaseData("12", new CssToken<CssNumeric>(CssTokenType.Number, new CssNumeric(12)));
-				yield return new TestCaseData("-14", new CssToken<CssNumeric>(CssTokenType.Number, new CssNumeric(-14)));
-				yield return new TestCaseData("12.34e-5", new CssToken<CssNumeric>(CssTokenType.Number | CssTokenType.FloatingPointType, new CssNumeric(12.34e-5)));
-				yield return new TestCaseData("12.34E-5", new CssToken<CssNumeric>(CssTokenType.Number | CssTokenType.FloatingPointType, new CssNumeric(12.34e-5)));
-				yield return new TestCaseData("-.34e-5", new CssToken<CssNumeric>(CssTokenType.Number | CssTokenType.FloatingPointType, new CssNumeric(-0.34e-5)));
-				yield return new TestCaseData("-.34E-5", new CssToken<CssNumeric>(CssTokenType.Number | CssTokenType.FloatingPointType, new CssNumeric(-0.34e-5)));
-				yield return new TestCaseData("10pt", new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(10, "pt")));
-				yield return new TestCaseData("+10pt", new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(10, "pt")));
-				yield return new TestCaseData("-10pt", new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(-10, "pt")));
-				yield return new TestCaseData("10.5pt", new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(10.5, "pt")));
-				yield return new TestCaseData("+10.5pt", new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(10.5, "pt")));
-				yield return new TestCaseData("-10.5pt", new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(-10.5, "pt")));
-				yield return new TestCaseData("12.34e-5pt", new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(12.34e-5, "pt")));
-				yield return new TestCaseData("12.34E-5pt", new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(12.34e-5, "pt")));
-				yield return new TestCaseData("-.34e-5pt", new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(-0.34e-5, "pt")));
-				yield return new TestCaseData("-.34E-5pt", new CssToken<CssNumeric>(CssTokenType.Dimension | CssTokenType.FloatingPointType, new CssNumeric(-0.34e-5, "pt")));
-				yield return new TestCaseData("10%", new CssToken<CssNumeric>(CssTokenType.Percentage, new CssNumeric(10, "%")));
-				yield return new TestCaseData("+10%", new CssToken<CssNumeric>(CssTokenType.Percentage, new CssNumeric(10, "%")));
-				yield return new TestCaseData("-10%", new CssToken<CssNumeric>(CssTokenType.Percentage, new CssNumeric(-10, "%")));
-				yield return new TestCaseData("10.5%", new CssToken<CssNumeric>(CssTokenType.Percentage | CssTokenType.FloatingPointType, new CssNumeric(10.5, "%")));
-				yield return new TestCaseData("+10.5%", new CssToken<CssNumeric>(CssTokenType.Percentage | CssTokenType.FloatingPointType, new CssNumeric(10.5, "%")));
-				yield return new TestCaseData("-10.5%", new CssToken<CssNumeric>(CssTokenType.Percentage | CssTokenType.FloatingPointType, new CssNumeric(-10.5, "%")));
-				yield return new TestCaseData("12.34e-5%", new CssToken<CssNumeric>(CssTokenType.Percentage | CssTokenType.FloatingPointType, new CssNumeric(12.34e-5, "%")));
-				yield return new TestCaseData("12.34E-5%", new CssToken<CssNumeric>(CssTokenType.Percentage | CssTokenType.FloatingPointType, new CssNumeric(12.34e-5, "%")));
-				yield return new TestCaseData("-.34e-5%", new CssToken<CssNumeric>(CssTokenType.Percentage | CssTokenType.FloatingPointType, new CssNumeric(-0.34e-5, "%")));
-				yield return new TestCaseData("-.34E-5%", new CssToken<CssNumeric>(CssTokenType.Percentage | CssTokenType.FloatingPointType, new CssNumeric(-0.34e-5, "%")));
+				yield return new TestCaseData("id", _tokenFactory.CreateIdentifierToken("id"));
+				yield return new TestCaseData("\"some value\"", _tokenFactory.CreateStringToken("some value"));
+				yield return new TestCaseData("'other value'", _tokenFactory.CreateStringToken("other value"));
+				yield return new TestCaseData("12", _tokenFactory.CreateNumericToken(false, "12"));
+				yield return new TestCaseData("-14", _tokenFactory.CreateNumericToken(false, "-14"));
+				yield return new TestCaseData("12.34e-5", _tokenFactory.CreateNumericToken(true, "12.34e-5"));
+				yield return new TestCaseData("12.34E-5", _tokenFactory.CreateNumericToken(true, "12.34e-5"));
+				yield return new TestCaseData("-.34e-5", _tokenFactory.CreateNumericToken(true, "-0.34e-5"));
+				yield return new TestCaseData("-.34E-5", _tokenFactory.CreateNumericToken(true, "-0.34e-5"));
+				yield return new TestCaseData("10pt", _tokenFactory.CreateNumericToken(false, "10", "pt"));
+				yield return new TestCaseData("+10pt", _tokenFactory.CreateNumericToken(false, "10", "pt"));
+				yield return new TestCaseData("-10pt", _tokenFactory.CreateNumericToken(false, "-10", "pt"));
+				yield return new TestCaseData("10.5pt", _tokenFactory.CreateNumericToken(true, "10.5", "pt"));
+				yield return new TestCaseData("+10.5pt", _tokenFactory.CreateNumericToken(true, "10.5", "pt"));
+				yield return new TestCaseData("-10.5pt", _tokenFactory.CreateNumericToken(true, "-10.5", "pt"));
+				yield return new TestCaseData("12.34e-5pt", _tokenFactory.CreateNumericToken(true, "12.34e-5", "pt"));
+				yield return new TestCaseData("12.34E-5pt", _tokenFactory.CreateNumericToken(true, "12.34e-5", "pt"));
+				yield return new TestCaseData("-.34e-5pt", _tokenFactory.CreateNumericToken(true, "-0.34e-5", "pt"));
+				yield return new TestCaseData("-.34E-5pt", _tokenFactory.CreateNumericToken(true, "-0.34e-5", "pt"));
+				yield return new TestCaseData("10%", _tokenFactory.CreateNumericToken(false, "10", "%"));
+				yield return new TestCaseData("+10%", _tokenFactory.CreateNumericToken(false, "10", "%"));
+				yield return new TestCaseData("-10%", _tokenFactory.CreateNumericToken(false, "-10", "%"));
+				yield return new TestCaseData("10.5%", _tokenFactory.CreateNumericToken(true, "10.5", "%"));
+				yield return new TestCaseData("+10.5%", _tokenFactory.CreateNumericToken(true, "10.5", "%"));
+				yield return new TestCaseData("-10.5%", _tokenFactory.CreateNumericToken(true, "-10.5", "%"));
+				yield return new TestCaseData("12.34e-5%", _tokenFactory.CreateNumericToken(true, "12.34e-5", "%"));
+				yield return new TestCaseData("12.34E-5%", _tokenFactory.CreateNumericToken(true, "12.34e-5", "%"));
+				yield return new TestCaseData("-.34e-5%", _tokenFactory.CreateNumericToken(true, "-0.34e-5", "%"));
+				yield return new TestCaseData("-.34E-5%", _tokenFactory.CreateNumericToken(true, "-0.34e-5", "%"));
 			}
 		}
 
@@ -248,7 +254,7 @@
 				return MultipleValueTestCases.Select(tc =>
 				{
 					i++;
-					CssBlockType blockType = null;
+					CssBlockType blockType;
 					switch (i % 3)
 					{
 						case 0:
@@ -335,59 +341,59 @@
 				yield return new TestCaseData("text-align:! important ", new CssDeclaration("text-align", new CssToken[0], true));
 				yield return new TestCaseData("text-align: ! important ", new CssDeclaration("text-align", CssToken.Whitespace, true));
 				yield return new TestCaseData("text-align:center", new CssDeclaration("text-align", 
-					new CssStringToken(CssTokenType.Identifier, "center"), 
+					_tokenFactory.CreateIdentifierToken("center"), 
 					false));
 				yield return new TestCaseData("text-align: center\t", new CssDeclaration("text-align",
 					new[]
 					{
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "center"),
+						_tokenFactory.CreateIdentifierToken("center"),
 						CssToken.Whitespace,
 					}, 
 					false));
 				yield return new TestCaseData("text-align:center!important", new CssDeclaration("text-align", 
-					new CssStringToken(CssTokenType.Identifier, "center"),
+					_tokenFactory.CreateIdentifierToken("center"),
 					true));
 				yield return new TestCaseData("text-align:center !important", new CssDeclaration("text-align",
 					new[]
 					{
-						new CssStringToken(CssTokenType.Identifier, "center"),
+						_tokenFactory.CreateIdentifierToken("center"),
 						CssToken.Whitespace,
 					},
 					true));
 				yield return new TestCaseData("text-align:center ! important", new CssDeclaration("text-align",
 					new[]
 					{
-						new CssStringToken(CssTokenType.Identifier, "center"),
+						_tokenFactory.CreateIdentifierToken("center"),
 						CssToken.Whitespace,
 					},
 					true));
 				yield return new TestCaseData("text-align:center! important", new CssDeclaration("text-align",
-					new CssStringToken(CssTokenType.Identifier, "center"),
+					_tokenFactory.CreateIdentifierToken("center"),
 					true));
 				yield return new TestCaseData("text-align:center! important \t ", new CssDeclaration("text-align",
-					new CssStringToken(CssTokenType.Identifier, "center"),
+					_tokenFactory.CreateIdentifierToken("center"),
 					true));
 				yield return new TestCaseData("font: sans-serif black 10pt", new CssDeclaration("font", 
 					new[]
 					{
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "sans-serif"),
+						_tokenFactory.CreateIdentifierToken("sans-serif"),
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "black"),
+						_tokenFactory.CreateIdentifierToken("black"),
 						CssToken.Whitespace,
-						new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(10, "pt"))
+						_tokenFactory.CreateNumericToken(false, "10", "pt")
 					}, 
 					false));
 				yield return new TestCaseData("font: sans-serif black 10pt !important", new CssDeclaration("font",
 					new[]
 					{
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "sans-serif"),
+						_tokenFactory.CreateIdentifierToken("sans-serif"),
 						CssToken.Whitespace,
-						new CssStringToken(CssTokenType.Identifier, "black"),
+						_tokenFactory.CreateIdentifierToken("black"),
 						CssToken.Whitespace,
-						new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(10, "pt")),
+						_tokenFactory.CreateNumericToken(false, "10", "pt"),
 						CssToken.Whitespace,
 					},
 					true));
@@ -404,7 +410,7 @@
 							new CssDeclaration("margin", new[]
 								{
 									CssToken.Whitespace,
-									new CssToken<CssNumeric>(CssTokenType.Dimension, new CssNumeric(2, "cm")),
+									_tokenFactory.CreateNumericToken(false, "2", "cm"),
 									CssToken.Whitespace,
 								}, false)
 						})));

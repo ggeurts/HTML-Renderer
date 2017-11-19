@@ -17,13 +17,13 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css
 		public bool Equals(CssUnicodeRange other)
 		{
 			return this.RangeStart == other.RangeStart
-			       && this.RangeEnd == other.RangeEnd;
+				&& this.RangeEnd == other.RangeEnd;
 		}
 
 		public override bool Equals(object obj)
 		{
 			return obj is CssUnicodeRange 
-			       && Equals((CssUnicodeRange) obj);
+				&& Equals((CssUnicodeRange) obj);
 		}
 
 		public override int GetHashCode()

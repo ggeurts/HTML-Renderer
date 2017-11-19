@@ -1,7 +1,6 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 {
 	using System.Collections.Generic;
-	using TheArtOfDev.HtmlRenderer.Core.Css;
 
 	public class CssTokenFactory
 	{
@@ -9,8 +8,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			= new Dictionary<CssTokenType, CssToken>();
 		private readonly Dictionary<KeyValuePair<CssTokenType, string>, CssStringToken> _stringTokenCache 
 			= new Dictionary<KeyValuePair<CssTokenType, string>, CssStringToken>();
-		private readonly Dictionary<CssNumeric, CssToken<CssNumeric>> _numericTokenCache
-			= new Dictionary<CssNumeric, CssToken<CssNumeric>>();
+		private readonly Dictionary<KeyValuePair<string, string>, CssNumericToken> _numericTokenCache
+			= new Dictionary<KeyValuePair<string, string>, CssNumericToken>();
 
 		public CssToken CreateToken(char ch)
 		{
@@ -51,7 +50,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			return GetOrCreateStringToken(CssTokenType.Function, name);
 		}
 
-		public CssToken CreateUrlToken(string value, bool isInvalid)
+		public CssToken CreateUrlToken(string value, bool isInvalid = false)
 		{
 			var tokenType = CssTokenType.Url;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
@@ -70,7 +69,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			return GetOrCreateStringToken(CssTokenType.AtKeyword, value);
 		}
 
-		public CssToken CreateStringToken(string value, bool isInvalid)
+		public CssToken CreateStringToken(string value, bool isInvalid = false)
 		{
 			var tokenType = CssTokenType.QuotedString;
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
@@ -78,22 +77,21 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			return GetOrCreateStringToken(tokenType, value);
 		}
 
-		public CssToken CreateNumericToken(bool isFloatingPoint, double value, string unit)
+		public CssToken CreateNumericToken(bool isFloatingPoint, string value, string unit = null)
 		{
-			var tokenType = string.IsNullOrEmpty(unit)
-				? CssTokenType.Number
-				: unit == "%"
-					? CssTokenType.Percentage
-					: CssTokenType.Dimension;
-			if (isFloatingPoint) tokenType |= CssTokenType.FloatingPointType;
+			var key = new KeyValuePair<string, string>(value, unit);
 
-			var numeric = new CssNumeric(value, unit);
-
-			CssToken<CssNumeric> token;
-			if (!_numericTokenCache.TryGetValue(numeric, out token))
+			CssNumericToken token;
+			if (!_numericTokenCache.TryGetValue(key, out token))
 			{
-				token = new CssToken<CssNumeric>(tokenType, numeric);
-				_numericTokenCache.Add(numeric, token);
+				var tokenType = string.IsNullOrEmpty(unit)
+					? CssTokenType.Number
+					: unit == "%"
+						? CssTokenType.Percentage
+						: CssTokenType.Dimension;
+				if (isFloatingPoint) tokenType |= CssTokenType.FloatingPointType;
+				token = new CssNumericToken(tokenType, value, unit);
+				_numericTokenCache.Add(key, token);
 			}
 			return token;
 		}
@@ -115,16 +113,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		{
 			return new CssOperatorToken(CssTokenType.Column);
 		}
-
-		public CssToken CreateUnicodeRangeToken(int rangeStart, int rangeEnd)
-		{
-			return new CssToken<CssUnicodeRange>(CssTokenType.UnicodeRange, new CssUnicodeRange(rangeStart, rangeEnd));
-		}
-
-		//public CssToken CreateCommentToken(int startPos, int length)
-		//{
-		//	return new CssToken(CssTokenType.Comment, startPos, length, _rawStringData);
-		//}
 
 		public CssToken CreateCdoToken()
 		{

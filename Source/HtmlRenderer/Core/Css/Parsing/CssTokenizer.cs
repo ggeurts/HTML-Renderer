@@ -6,6 +6,9 @@
 	using System.Text;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
+	/// <summary>
+	/// A CSS tokenizer that implements CSS Syntax Module Level 3, updated up to Editor's draft, 14 November 2017.
+	/// </summary>
 	public class CssTokenizer
 	{
 		private const int MAX_CODE_POINT = 0x10FFFF;
@@ -173,20 +176,6 @@
 						}
 						continue;
 
-					case 'u':
-					case 'U':
-						if (_reader.Peek(1) == '+' && ((ch = _reader.Peek(2)) == '?' || IsHexDigit(ch)))
-						{
-							_reader.Read();
-							_reader.Read();
-							yield return ConsumeUnicodeRangeToken();
-						}
-						else
-						{
-							yield return ConsumeIdentifierLikeToken();
-						}
-						continue;
-
 					default:
 						if (TryConsumeNumericToken(ref token))
 						{
@@ -217,9 +206,27 @@
 				_reader.Read();
 				if (name.Equals("url", StringComparison.OrdinalIgnoreCase))
 				{
-					bool isInvalid;
-					var url = ConsumeUrl(out isInvalid);
-					return TokenFactory.CreateUrlToken(url, isInvalid);
+					var lookaheadIndex = 0;
+					if (IsWhiteSpace(lookaheadIndex))
+					{
+						lookaheadIndex++;
+						while (IsWhiteSpace(lookaheadIndex))
+						{
+							_reader.Read();
+						}
+					}
+
+					switch (_reader.Peek(lookaheadIndex))
+					{
+						case '\'':
+						case '\"':
+							// Treat as regular function token
+							break;
+						default:
+							bool isInvalid;
+							var url = ConsumeUrl(out isInvalid);
+							return TokenFactory.CreateUrlToken(url, isInvalid);
+					}
 				}
 				return TokenFactory.CreateFunctionToken(name);
 			}
@@ -285,86 +292,64 @@
 			var ch = _reader.Peek();
 			if (ch < 0)
 			{
+				NotifyError("Unexpected EOF in url literal");
 				isInvalid = false;
 				return null;
 			}
 
-			// Handle quoted string values
-			switch (ch)
+			_valueBuilder.Length = 0;
+			do
 			{
-				case '\'':
-				case '"':
-					var stringToken = ConsumeStringToken();
-					if (!stringToken.IsInvalid)
-					{
-						while (TryConsumeWhitespace()) { }
+				switch (ch)
+				{
+					case ')':
+						_reader.Read();
+						isInvalid = false;
+						return BuildValue();
 
-						if (_reader.Peek() == ')')
+					case '\'':
+					case '"':
+					case '(':
+						NotifyError(string.Format(CultureInfo.InvariantCulture, "Unexpected '{0}' character in url literal", ch));
+						ConsumeBadUrlRemnants();
+						isInvalid = true;
+						return BuildValue();
+
+					case '\\':
+						_reader.Read();
+						if (IsValidEscape(ch, _reader.Peek()))
 						{
-							_reader.Read();
-							isInvalid = false;
-							return stringToken.StringValue;
+							ConsumeEscapedCodePoint(_valueBuilder);
 						}
-					}
-
-					ConsumeBadUrlRemnants();
-					isInvalid = true;
-					return stringToken.StringValue;
-
-				default:
-					_valueBuilder.Length = 0;
-					do
-					{
-						switch (ch)
+						else
 						{
-							case ')':
-								_reader.Read();
-								isInvalid = false;
-								return BuildValue();
-
-							case '\'':
-							case '"':
-							case '(':
-								NotifyError("Unexpected '(' character in url literal");
-								ConsumeBadUrlRemnants();
-								isInvalid = true;
-								return BuildValue();
-
-							case '\\':
-								_reader.Read();
-								if (IsValidEscape(ch, _reader.Peek()))
-								{
-									ConsumeEscapedCodePoint(_valueBuilder);
-								}
-								else
-								{
-									NotifyError("Invalid escape sequence in url literal");
-									ConsumeBadUrlRemnants();
-									isInvalid = true;
-									return BuildValue();
-								}
-								break;
-
-							default:
-								if (IsNonPrintable(ch))
-								{
-									NotifyError("Non-printable character in url literal");
-									ConsumeBadUrlRemnants();
-									isInvalid = true;
-									return BuildValue();
-								}
-
-								_valueBuilder.Append((char)_reader.Read());
-								break;
+							NotifyError("Invalid escape sequence in url literal");
+							ConsumeBadUrlRemnants();
+							isInvalid = true;
+							return BuildValue();
 						}
-						while (TryConsumeWhitespace()) { }
+						break;
 
-						ch = _reader.Peek();
-					} while (ch >= 0);
+					default:
+						if (IsNonPrintable(ch))
+						{
+							NotifyError("Non-printable character in url literal");
+							ConsumeBadUrlRemnants();
+							isInvalid = true;
+							return BuildValue();
+						}
 
-					isInvalid = false;
-					return BuildValue();
-			}
+						_valueBuilder.Append((char)_reader.Read());
+						break;
+				}
+				while (TryConsumeWhitespace()) { }
+
+				ch = _reader.Peek();
+			} while (ch >= 0);
+
+			NotifyError("Unexpected EOF in url literal");
+			isInvalid = false;
+			return BuildValue();
 		}
 
 		private void ConsumeBadUrlRemnants()
@@ -403,7 +388,7 @@
 			bool isFloatingPoint;
 			if (!TryConsumeNumber(_valueBuilder, out isFloatingPoint)) return false;
 
-			var value = double.Parse(BuildValue(), CultureInfo.InvariantCulture);
+			var value = BuildValue();
 
 			if (_reader.TryRead("%"))
 			{
@@ -420,52 +405,6 @@
 
 			result = TokenFactory.CreateNumericToken(isFloatingPoint, value, null);
 			return true;
-		}
-
-		private CssToken ConsumeUnicodeRangeToken()
-		{
-			var ch = _reader.Peek();
-
-			_valueBuilder.Length = 0;
-			while (_valueBuilder.Length < 6 && IsHexDigit(ch))
-			{
-				_valueBuilder.Append((char)_reader.Read());
-				ch = _reader.Peek();
-			}
-
-			int rangeStart, rangeEnd;
-			if (_valueBuilder.Length < 6 && ch == '?')
-			{
-				do
-				{
-					_valueBuilder.Append((char) _reader.Read());
-					ch = _reader.Peek();
-				} while (_valueBuilder.Length < 6 && ch == '?');
-
-				var hexNumber = BuildValue();
-				rangeStart = int.Parse(hexNumber.Replace('?', '0'), NumberStyles.AllowHexSpecifier);
-				rangeEnd = int.Parse(hexNumber.Replace('?', 'F'), NumberStyles.AllowHexSpecifier);
-			}
-			else
-			{
-				rangeStart = rangeEnd = int.Parse(BuildValue(), NumberStyles.AllowHexSpecifier);
-			}
-
-			if (ch == '-' && IsHexDigit(_reader.Peek(1)))
-			{
-				_reader.Read();
-				_valueBuilder.Length = 0;
-				do
-				{
-					_valueBuilder.Append((char)_reader.Read());
-					ch = _reader.Peek();
-				} while (_valueBuilder.Length < 6 && IsHexDigit(ch));
-
-				var hexNumber = BuildValue();
-				rangeEnd = int.Parse(hexNumber, NumberStyles.AllowHexSpecifier);
-			}
-
-			return TokenFactory.CreateUnicodeRangeToken(rangeStart, rangeEnd);
 		}
 
 		private CssToken ConsumeWhitespaceToken()
@@ -519,7 +458,6 @@
 					_linePos = _reader.Position;
 					return true;
 				case '\f':
-				case ' ':
 					_reader.Read();
 					return true;
 				case '\r':
@@ -742,7 +680,22 @@
 			return true;
 		}
 
-		private bool IsValidEscape(int ch1, int ch2)
+		private bool IsWhiteSpace(int lookaheadIndex)
+		{
+			switch (_reader.Peek(lookaheadIndex))
+			{
+				case '\t':
+				case ' ':
+				case '\n':
+				case '\f':
+				case '\r':
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		private static bool IsValidEscape(int ch1, int ch2)
 		{
 			return ch1 == '\\' && !IsNewLine(ch2);
 		}
@@ -750,13 +703,6 @@
 		private static bool IsDigit(int ch)
 		{
 			return ch >= '0' && ch <= '9';
-		}
-
-		private static bool IsHexDigit(int ch)
-		{
-			return IsDigit(ch)
-				|| (ch >= 'a' && ch <= 'f')
-			    || (ch >= 'A' && ch <= 'F');
 		}
 
 		private static bool IsNonPrintable(int ch)

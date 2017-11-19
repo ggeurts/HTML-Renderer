@@ -22,19 +22,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			get { return _tokenType; }
 		}
 
-		public CssNumeric? NumericValue
+		public virtual CssNumeric? NumericValue
 		{
-			get { return (this as CssToken<CssNumeric>)?.Value; }
+			get { return (this as CssNumericToken)?.Value; }
 		}
 
 		public string StringValue
 		{
 			get { return (this as CssStringToken)?.Value; }
-		}
-
-		public CssUnicodeRange? UnicodeRangeValue
-		{
-			get { return (this as CssToken<CssUnicodeRange>)?.Value; }
 		}
 
 		public bool IsInvalid
@@ -88,6 +83,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 				&& _tokenType == (CssTokenType.Delimiter | (CssTokenType)value);
 		}
 
+		/// <summary>
+		/// Case insensitive equality test of token text and a given string value.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public bool HasValue(string value)
 		{
 			if (value == null) return false;
@@ -98,6 +98,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			    && CssEqualityComparer<string>.Default.Equals(token.Value, value);
 		}
 
+		/// <summary>
+		/// Case insensitive equality test of token text and a given character value.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public bool HasValue(char value)
 		{
 			var asciiToken = this as CssAsciiToken;
@@ -107,6 +112,39 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			if (stringToken != null 
 				&& stringToken.Value.Length == 1 
 				&& CssCharEqualityComparer.Default.Equals(stringToken.Value[0], value)) return true;
+
+			return false;
+		}
+
+		/// <summary>
+		/// Case insensitive test of whether token text starts with a given string value.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public bool StartsWith(string value)
+		{
+			if (value == null) return false;
+			if (value.Length == 1) return HasValue(value[0]);
+
+			var token = this as CssStringToken;
+			return token != null
+			       && CssEqualityComparer<string>.Default.Equals(token.Value, value);
+		}
+
+		/// <summary>
+		/// Case insensitive test of whether token text starts with a given character value.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public bool StartsWith(char value)
+		{
+			var asciiToken = this as CssAsciiToken;
+			if (asciiToken != null && asciiToken.Value == value) return true;
+
+			var stringToken = this as CssStringToken;
+			if (stringToken != null
+			    && stringToken.Value.Length >= 1
+			    && CssCharEqualityComparer.Default.Equals(stringToken.Value[0], value)) return true;
 
 			return false;
 		}
@@ -199,7 +237,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		}
 	}
 
-	public class CssStringToken : CssToken
+	/// <summary>
+	/// Represents an identifier, keyword or quoted string token.
+	/// </summary>
+	internal class CssStringToken : CssToken
 	{
 		private readonly string _value;
 
@@ -243,6 +284,54 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			return other != null
 			    && this.TokenType == other.TokenType
 			    && _value == other._value;
+		}
+
+		public override int GetHashCode()
+		{
+			return HashUtility.Hash((int)this.TokenType, _value.GetHashCode());
+		}
+	}
+
+	/// <summary>
+	/// Represents a number, percentage or dimension token
+	/// </summary>
+	internal class CssNumericToken : CssToken
+	{
+		private readonly CssNumeric _value;
+
+		// We must hold onto the original number representation, to support the "urange" production rule
+		// that specifies the grammar of unicode ranges.
+		private readonly string _unparsedValue;
+
+		public CssNumericToken(CssTokenType tokenType, string value, string unit = null) 
+			: base(tokenType)
+		{
+			ArgChecker.AssertArgNotNullOrEmpty(value, nameof(value));
+			_unparsedValue = value;
+			_value = new CssNumeric(double.Parse(value, CultureInfo.InvariantCulture), unit);
+		}
+
+		public CssNumeric Value
+		{
+			get { return _value; }
+		}
+
+		public override string ToString()
+		{
+			return _unparsedValue + _value.Unit;
+		}
+
+		public override void ToString(StringBuilder sb)
+		{
+			sb.Append(_unparsedValue).Append(_value.Unit);
+		}
+
+		public override bool Equals(object obj)
+		{
+			var other = obj as CssNumericToken;
+			return other != null
+				&& this.TokenType == other.TokenType
+				&& _value.Equals(other._value);
 		}
 
 		public override int GetHashCode()
