@@ -3,93 +3,75 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System;
 	using System.Globalization;
 	using System.Text;
+	using System.Xml;
 	using System.Xml.Linq;
-	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	internal class CssAttributeSelector : CssSimpleSelector
+	/// <summary>
+	/// Represents a selector for elements that have an attribute with a given local name and/or namespace and/or whose value
+	/// meets a given string matching criterion.
+	/// </summary>
+	public abstract class CssAttributeSelector : CssSimpleSelector
 	{
 		private static readonly Func<string, StringComparison, bool> Always = (s, c) => true;
 		private static readonly Func<string, StringComparison, bool> Never = (s, c) => false;
 
-		private readonly XName _name;
 		private readonly CssAttributeMatchOperator _matchOperator;
 		private readonly string _matchOperand;
 		private Func<string, StringComparison, bool> _predicate;
 
-		public CssAttributeSelector(XName name)
-		{
-			ArgChecker.AssertArgNotNull(name, nameof(name));
-			_name = name;
-		}
+		protected CssAttributeSelector()
+		{}
 
-		public CssAttributeSelector(XName name, CssAttributeMatchOperator matchOperator, string matchOperand)
+		protected CssAttributeSelector(CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
-			ArgChecker.AssertArgNotNull(name, nameof(name));
-			_name = name;
 			_matchOperator = matchOperator;
 			_matchOperand = matchOperand;
 		}
 
-		public CssAttributeSelector(string localName)
+		/// <summary>
+		/// Gets local name of matching attributes.
+		/// </summary>
+		public abstract string LocalName { get; }
+
+		/// <summary>
+		/// Gets namespace of matching attributes.
+		/// </summary>
+		public abstract XNamespace Namespace { get; }
+
+		/// <summary>
+		/// Gets operator for matching of attribute values to <see cref="MatchOperand"/>.
+		/// </summary>
+		public CssAttributeMatchOperator MatchOperator
 		{
-			_name = AnyNamespace + localName;
+			get { return _matchOperator; }
 		}
 
-		public CssAttributeSelector(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
+		/// <summary>
+		/// Gets value to which attribute values are matched.
+		/// </summary>
+		public string MatchOperand
 		{
-			_name = AnyNamespace + localName;
-			_matchOperator = matchOperator;
-			_matchOperand = matchOperand;
+			get { return _matchOperand; }
 		}
 
-		public override bool Matches<TElement>(TElement element)
+		public Func<string, StringComparison, bool> Predicate
 		{
-			var predicate = _predicate ?? (_predicate = CreatePredicate(_matchOperator, _matchOperand));
-			return _name.Namespace == AnyNamespace
-				? element.HasAttribute(_name.LocalName, predicate)
-				: element.HasAttribute(_name, predicate);
+			get { return _predicate ?? (_predicate = CreatePredicate(_matchOperator, _matchOperand)); }
 		}
 
-		public override bool Equals(object obj)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			var other = obj as CssAttributeSelector;
-			return other != null
-			    && _name == other._name
-			    && _matchOperator == other._matchOperator
-			    && _matchOperand == other._matchOperand;
-		}
-
-		public override int GetHashCode()
-		{
-			var hash = _name.GetHashCode();
 			if (_matchOperator != CssAttributeMatchOperator.Any)
-			{
-				hash = HashUtility.Hash(hash, (int)_matchOperator);
-				hash = HashUtility.Hash(hash, _matchOperand.GetHashCode());
-			}
-			return hash;
-		}
-
-		public override void ToString(StringBuilder sb)
-		{
-			sb.Append('[');
-			if (_name.Namespace != XNamespace.None)
-			{
-				sb.Append(_name.Namespace).Append('|');
-			}
-			sb.Append(_name.LocalName);
-			if(_matchOperator != CssAttributeMatchOperator.Any)
 			{
 				if (_matchOperator != CssAttributeMatchOperator.Exact)
 				{
-					sb.Append((char) _matchOperator);
+					sb.Append((char)_matchOperator);
 				}
 				sb.Append('=')
 					.Append('"')
 					.Append(_matchOperand.Replace("\"", "\\\""))
 					.Append('"');
 			}
-			sb.Append(']');
 		}
 
 		private static Func<string, StringComparison, bool> CreatePredicate(CssAttributeMatchOperator matchOperator, string operand)

@@ -4,6 +4,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System.Collections.Immutable;
 	using System.Linq;
 	using System.Text;
+	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public class CssSelectorSequence : CssSelector, ICssSelectorSequence
@@ -57,12 +58,12 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return hash;
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			_typeSelector.ToString(sb);
+			_typeSelector.ToString(sb, namespaceResolver);
 			foreach (var selector in _otherSelectors)
 			{
-				selector.ToString(sb);
+				selector.ToString(sb, namespaceResolver);
 			}
 		}
 	}

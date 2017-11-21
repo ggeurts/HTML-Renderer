@@ -3,6 +3,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System;
 	using System.Diagnostics.CodeAnalysis;
 	using System.Text;
+	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	internal abstract class CssStructuralPseudoClassSelector : CssPseudoClassSelector
@@ -34,9 +35,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return HashUtility.Hash(this.GetType().GetHashCode(), HashUtility.Hash(_cycleSize, _offset));
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			base.ToString(sb);
+			base.ToString(sb, namespaceResolver);
 			sb.Append('(');
 
 			bool useShortForm = false;

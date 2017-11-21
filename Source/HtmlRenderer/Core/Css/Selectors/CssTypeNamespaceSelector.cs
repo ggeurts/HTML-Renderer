@@ -1,20 +1,18 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System.Text;
+	using System.Xml;
 	using System.Xml.Linq;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	internal class CssTypeNamespaceSelector : CssTypeSelector
 	{
 		private readonly XNamespace _namespace;
-		private readonly string _namespacePrefix;
 
-		public CssTypeNamespaceSelector(XNamespace ns, string namespacePrefix)
+		public CssTypeNamespaceSelector(XNamespace ns)
 		{
 			ArgChecker.AssertArgNotNull(ns, nameof(ns));
-			ArgChecker.AssertArgNotNull(namespacePrefix, nameof(namespacePrefix));
 			_namespace = ns;
-			_namespacePrefix = namespacePrefix;
 		}
 
 		public override string LocalName
@@ -25,11 +23,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		public override XNamespace Namespace
 		{
 			get { return _namespace; }
-		}
-
-		public override string NamespacePrefix
-		{
-			get { return _namespacePrefix; }
 		}
 
 		public override bool Matches<TElement>(TElement element)
@@ -49,9 +42,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return _namespace.GetHashCode();
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			sb.Append(_namespacePrefix).Append("|").Append(AnyLocalName);
+			ToString(sb, _namespace, namespaceResolver);
 		}
 	}
 }

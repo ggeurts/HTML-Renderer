@@ -2,6 +2,7 @@
 {
 	using System;
 	using System.Linq;
+	using System.Xml;
 	using System.Xml.Linq;
 	using NUnit.Framework;
 	using TheArtOfDev.HtmlRenderer.Core.Css.Selectors;
@@ -13,6 +14,24 @@
 		#region Constants
 
 		private const string XHTML_NAMESPACE = "https://www.w3.org/1999/xhtml/";
+		private const string SOME_NAMESPACE = "http://test.org/schema";
+
+		#endregion
+
+		#region Instance fields
+
+		private readonly XmlNameTable _nameTable = new NameTable();
+		private XmlNamespaceManager _namespaceManager;
+
+		#endregion
+
+		#region SetUp / TearDown
+
+		[SetUp]
+		public void SetUp()
+		{
+			_namespaceManager = new XmlNamespaceManager(_nameTable);
+		}
 
 		#endregion
 
@@ -26,14 +45,30 @@
 			{
 				Assert.That(selector.LocalName, Is.EqualTo("*"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
-				Assert.That(selector.NamespacePrefix, Is.EqualTo("*"), nameof(selector.NamespacePrefix));
-				Assert.That(selector.ToString(), Is.EqualTo("*|*"), nameof(selector.ToString));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
 			});
 		}
 
+		public void UniversalSelector_ToString_NoDefaultNamespaceExists()
+		{
+			Assert.That(CssSelector.Universal.ToString(_namespaceManager), Is.EqualTo("*"));
+		}
+
 		[Test]
-		public void UniversalSelector_MatchesAllNodes()
+		public void UniversalSelector_ToString_WhenDefaultNamespaceExists()
+		{
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+			Assert.That(CssSelector.Universal.ToString(_namespaceManager), Is.EqualTo("*|*"));
+		}
+
+		[Test]
+		public void UniversalSelector_ToString_WhenNoDefaultNamespaceExists()
+		{
+			Assert.That(CssSelector.Universal.ToString(_namespaceManager), Is.EqualTo("*"));
+		}
+
+		[Test]
+		public void UniversalSelector_MatchesAllElements()
 		{
 			var xdoc = XDocument.Parse("<html><head /><body /></html>");
 			var allElements = xdoc.Root.DescendantsAndSelf().ToList();
@@ -53,10 +88,20 @@
 			{
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
-				Assert.That(selector.NamespacePrefix, Is.EqualTo("*"), nameof(selector.NamespacePrefix));
-				Assert.That(selector.ToString(), Is.EqualTo("*|h1"), nameof(selector.ToString));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
 			});
+		}
+
+		public void TypeSelector_ForLocalNameInAnyNamespace_ToString_WhenDefaultNamespaceExists()
+		{
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+			Assert.That(CssSelector.WithLocalName("h1").ToString(_namespaceManager), Is.EqualTo("*|h1"));
+		}
+
+		public void TypeSelector_ForLocalNameInAnyNamespace_ToString_WhenNoDefaultNamespaceExists()
+		{
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+			Assert.That(CssSelector.WithLocalName("h1").ToString(_namespaceManager), Is.EqualTo("h1"));
 		}
 
 		[Test]
@@ -71,16 +116,21 @@
 		[Test]
 		public void TypeSelector_ForQualifiedNameInDefaultNamespace()
 		{
-			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE), "");
+			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
 
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
-				Assert.That(selector.NamespacePrefix, Is.EqualTo(""), nameof(selector.NamespacePrefix));
-				Assert.That(selector.ToString(), Is.EqualTo("|h1"), nameof(selector.ToString));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
 			});
+		}
+
+		[Test]
+		public void TypeSelector_ForQualifiedNameInDefaultNamespace_ToString()
+		{
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+			Assert.That(CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("h1"));
 		}
 
 		[Test]
@@ -88,7 +138,7 @@
 		{
 			const string SOME_NAMESPACE = "http://test.org/schema";
 
-			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE), "");
+			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
 			var xdoc = XDocument.Parse(string.Format(@"
 				<html xmlns='{0}' xmlns:t='{1}'>
 					<head />
@@ -108,15 +158,23 @@
 		[Test]
 		public void TypeSelector_ForQualifiedNameInNonDefaultNamespace()
 		{
-			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE), "xhtml");
+			_namespaceManager.AddNamespace("xhtml", XHTML_NAMESPACE);
+
+			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
-				Assert.That(selector.NamespacePrefix, Is.EqualTo("xhtml"), nameof(selector.NamespacePrefix));
-				Assert.That(selector.ToString(), Is.EqualTo("xhtml|h1"), nameof(selector.ToString));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
 			});
+		}
+
+		[Test]
+		public void TypeSelector_ForQualifiedNameInNonDefaultNamespace_ToString()
+		{
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+			_namespaceManager.AddNamespace("t", SOME_NAMESPACE);
+			Assert.That(CssSelector.WithName(XName.Get("h1", SOME_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("t|h1"));
 		}
 
 		[Test]
@@ -124,7 +182,7 @@
 		{
 			const string SOME_NAMESPACE = "http://test.org/schema";
 
-			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE), "");
+			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
 			var xdoc = XDocument.Parse(string.Format(@"
 				<html xmlns:s='{0}' xmlns:t='{1}'>
 					<head />
@@ -139,6 +197,60 @@
 
 			var element2 = new XElementInfo(xdoc.Descendants(XName.Get("h1", SOME_NAMESPACE)).First());
 			Assert.That(selector.Matches(element2), Is.False, "t:h1");
+		}
+
+		#endregion
+
+		#region Attribute selectors
+
+		[Test]
+		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue()
+		{
+			var selector = CssSelector.WithAttribute("href");
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
+				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
+			});
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_ToString_WhenDefaultNamespaceExists()
+		{
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+			Assert.That(CssSelector.WithAttribute("href").ToString(_namespaceManager), Is.EqualTo("[*|href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_ToString_WhenNoDefaultNamespaceExists()
+		{
+			Assert.That(CssSelector.WithAttribute("href").ToString(_namespaceManager), Is.EqualTo("[href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForQualifiedName_WithAnyValue()
+		{
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+
+			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE));
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
+				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
+			});
+		}
+
+		[Test]
+		public void AttributeSelector_ForNamespace_WithAnyValue()
+		{
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+
+			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE));
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
+				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
+			});
 		}
 
 		#endregion
@@ -246,6 +358,16 @@
 				foreach (var att in _element.Attributes())
 				{
 					if (att.Name.LocalName == localName && predicate(att.Value, StringComparison.Ordinal)) return true;
+				}
+				return false;
+			}
+
+			public bool HasAttributeInNamespace(XNamespace ns, Func<string, StringComparison, bool> predicate)
+			{
+				if (_element == null) return false;
+				foreach (var att in _element.Attributes())
+				{
+					if (att.Name.Namespace == ns && predicate(att.Value, StringComparison.Ordinal)) return true;
 				}
 				return false;
 			}

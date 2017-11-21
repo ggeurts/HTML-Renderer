@@ -1,6 +1,7 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System.Text;
+	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public class CssCombinatorSelector : CssSelector
@@ -61,10 +62,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return HashUtility.Hash((int)_combinator, _relativeSelector.GetHashCode());
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			_previous?.ToString(sb);
-			_relativeSelector.ToString(sb);
+			_previous?.ToString(sb, namespaceResolver);
+			_relativeSelector.ToString(sb, namespaceResolver);
 			sb.Append(' ');
 			if (_combinator != CssCombinator.DescendantOf)
 			{

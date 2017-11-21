@@ -7,16 +7,22 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	/// </summary>
 	public abstract class CssTypeSelector : CssSimpleSelector, ICssSelectorSequence
 	{
-		protected const string AnyLocalName = "*";
-		protected const string AnyNamespacePrefix = "*";
-
 		public CssTypeSelector TypeSelector
 		{
 			get { return this; }
 		}
 
+		internal CssTypeSelector()
+		{}
+
+		/// <summary>
+		/// Gets local name of matching elements.
+		/// </summary>
 		public abstract string LocalName { get; }
+
+		/// <summary>
+		/// Gets namespace of matching elements.
+		/// </summary>
 		public abstract XNamespace Namespace { get; }
-		public abstract string NamespacePrefix { get; }
 	}
 }

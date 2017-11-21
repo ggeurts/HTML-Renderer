@@ -39,6 +39,7 @@
 		bool HasChildren { get; }
 		bool HasAttribute(XName name, Func<string, StringComparison, bool> predicate);
 		bool HasAttribute(string localName, Func<string, StringComparison, bool> predicate);
+		bool HasAttributeInNamespace(XNamespace ns, Func<string, StringComparison, bool> predicate);
 		bool HasClass(string name);
 		bool HasId(string id);
 		bool HasDynamicState(CssDynamicElementState state);

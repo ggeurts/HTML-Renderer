@@ -1,6 +1,7 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System.Text;
+	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	internal class CssNotPseudoClassSelector : CssPseudoClassSelector
@@ -38,11 +39,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return ~this.Selector.GetHashCode();
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			base.ToString(sb);
+			base.ToString(sb, namespaceResolver);
 			sb.Append('(');
-			this.Selector.ToString(sb);
+			this.Selector.ToString(sb, namespaceResolver);
 			sb.Append(')');
 		}
 	}

@@ -1,6 +1,7 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System.Text;
+	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public abstract class CssPseudoClassSelector : CssSimpleSelector
@@ -47,7 +48,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return _name.GetHashCode();
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
 			sb.Append(':').Append(_name);
 		}

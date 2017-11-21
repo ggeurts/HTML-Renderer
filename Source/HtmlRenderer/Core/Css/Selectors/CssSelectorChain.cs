@@ -1,6 +1,7 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System.Text;
+	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public class CssSelectorChain : CssSelector, ICssSelector
@@ -26,10 +27,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return _finalSequence.Matches(element) && _combinator.Matches(element);
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			_combinator.ToString(sb);
-			_finalSequence.ToString(sb);
+			_combinator.ToString(sb, namespaceResolver);
+			_finalSequence.ToString(sb, namespaceResolver);
 		}
 	}
 }

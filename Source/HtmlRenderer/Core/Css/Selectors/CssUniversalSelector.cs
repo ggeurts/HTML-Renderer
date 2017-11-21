@@ -1,6 +1,7 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System.Text;
+	using System.Xml;
 	using System.Xml.Linq;
 
 	internal class CssUniversalSelector : CssTypeSelector
@@ -20,11 +21,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			get { return AnyNamespace; }
 		}
 
-		public override string NamespacePrefix
-		{
-			get { return AnyLocalName; }
-		}
-
 		public override bool Equals(object obj)
 		{
 			return obj is CssUniversalSelector;
@@ -35,9 +31,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return 0;
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			sb.Append(AnyNamespacePrefix).Append('|').Append(AnyLocalName);
+			if (!string.IsNullOrEmpty(namespaceResolver?.LookupNamespace("")))
+			{
+				// We must write namespace prefix when default namespace has been defined 
+				sb.Append(AnyNamespacePrefix).Append('|');
+			}
+			sb.Append(AnyLocalName);
 		}
 	}
 }

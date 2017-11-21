@@ -1,6 +1,7 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System.Text;
+	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	internal class CssIdSelector : CssSimpleSelector
@@ -29,7 +30,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return '#' ^ _id.GetHashCode();
 		}
 
-		public override void ToString(StringBuilder sb)
+		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
 			sb.Append('#').Append(_id);
 		}
