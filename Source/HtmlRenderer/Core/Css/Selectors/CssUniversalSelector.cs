@@ -1,12 +1,28 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System.Text;
+	using System.Xml.Linq;
 
 	internal class CssUniversalSelector : CssTypeSelector
 	{
 		public override bool Matches<TElement>(TElement element)
 		{
 			return true;
+		}
+
+		public override string LocalName
+		{
+			get { return AnyLocalName; }
+		}
+
+		public override XNamespace Namespace
+		{
+			get { return AnyNamespace; }
+		}
+
+		public override string NamespacePrefix
+		{
+			get { return AnyLocalName; }
 		}
 
 		public override bool Equals(object obj)
@@ -21,7 +37,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public override void ToString(StringBuilder sb)
 		{
-			sb.Append("*|*");
+			sb.Append(AnyNamespacePrefix).Append('|').Append(AnyLocalName);
 		}
 	}
 }

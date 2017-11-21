@@ -8,7 +8,7 @@
 	{
 		#region Static fields
 
-		public static readonly XNamespace AnyNamespace = XNamespace.Get("*");
+		protected static readonly XNamespace AnyNamespace = XNamespace.Get("*");
 		public static readonly CssTypeSelector Universal = new CssUniversalSelector();
 
 		private static readonly PredefinedPseudoClassSelectorDictionary _predefinedSelectors =
@@ -48,9 +48,15 @@
 
 		#region Factory methods
 
-		public static CssTypeSelector WithNamespace(XNamespace ns)
+		/// <summary>
+		/// Creates selector that matches elements with given namespace. Use namespace <see cref="XNamespace.None"/>
+		/// to match elements without a namespace.
+		/// </summary>
+		/// <param name="ns">The namespace name.</param>
+		/// <param name="namespacePrefix">The namespace prefix. An empty string represents the default namespace.</param>
+		public static CssTypeSelector WithNamespace(XNamespace ns, string namespacePrefix)
 		{
-			return new CssTypeNamespaceSelector(ns);
+			return new CssTypeNamespaceSelector(ns, namespacePrefix);
 		}
 
 		/// <summary>
@@ -58,9 +64,10 @@
 		/// to match elements without a namespace.
 		/// </summary>
 		/// <param name="name">The qualified element name.</param>
-		public static CssTypeSelector WithName(XName name)
+		/// <param name="namespacePrefix">The namespace prefix. An empty string represents the default namespace.</param>
+		public static CssTypeSelector WithName(XName name, string namespacePrefix)
 		{
-			return new CssTypeNameSelector(name);
+			return new CssTypeNameSelector(name, namespacePrefix);
 		}
 
 		/// <summary>

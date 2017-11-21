@@ -32,12 +32,12 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public CssAttributeSelector(string localName)
 		{
-			_name = XName.Get(localName, AnyNamespace.NamespaceName);
+			_name = AnyNamespace + localName;
 		}
 
 		public CssAttributeSelector(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
-			_name = XName.Get(localName, AnyNamespace.NamespaceName);
+			_name = AnyNamespace + localName;
 			_matchOperator = matchOperator;
 			_matchOperand = matchOperand;
 		}

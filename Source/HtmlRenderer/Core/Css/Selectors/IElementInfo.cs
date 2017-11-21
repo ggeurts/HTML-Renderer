@@ -11,10 +11,28 @@
 		TElement Parent { get; }
 		bool IsRoot { get; }
 		bool IsTarget { get; }
+
+		/// <summary>
+		/// Gets the number of child elements of this element.
+		/// </summary>
 		int ChildCount { get; }
+		
+		/// <summary>
+		/// Gets zero-based index of this element in the collection of sibling elements
+		/// </summary>
 		int ChildIndex { get; }
+
+		/// <summary>
+		/// Gets zero-based index of this element in the collection of sibling elements 
+		/// with the same name as this element.
+		/// </summary>
 		int SiblingIndex { get; }
+
+		/// <summary>
+		/// Gets the number of sibling elements with the same name as this element.
+		/// </summary>
 		int SiblingCount { get; }
+
 		bool HasName(XName name);
 		bool HasName(string localName);
 		bool HasNamespace(XNamespace ns);
