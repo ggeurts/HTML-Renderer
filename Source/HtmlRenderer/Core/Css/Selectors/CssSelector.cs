@@ -89,7 +89,7 @@
 		/// <param name="name">Qualified name of matching attributes.</param>
 		public static CssAttributeSelector WithAttribute(XName name)
 		{
-			return new CssAttributeNameSelector(name);
+			return new CssAttributeSelector(name);
 		}
 
 		/// <summary>
@@ -100,7 +100,7 @@
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
 		public static CssAttributeSelector WithAttribute(XName name, CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
-			return new CssAttributeNameSelector(name, matchOperator, matchOperand);
+			return new CssAttributeSelector(name, matchOperator, matchOperand);
 		}
 
 		/// <summary>
@@ -109,7 +109,7 @@
 		/// <param name="localName">The local name of matching attributes.</param>
 		public static CssAttributeSelector WithAttribute(string localName)
 		{
-			return new CssAttributeNameSelector(localName);
+			return new CssAttributeSelector(localName);
 		}
 
 		/// <summary>
@@ -120,17 +120,7 @@
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
 		public CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
-			return new CssAttributeNameSelector(localName, matchOperator, matchOperand);
-		}
-
-		/// <summary>
-		/// Creates selector for elements that have any attributes in a given namespace. Use namespace <see cref="XNamespace.None"/>
-		/// to match attributes without a namespace.
-		/// </summary>
-		/// <param name="ns">The namespace name.</param>
-		public static CssAttributeSelector WithAttributeInNamespace(XNamespace ns)
-		{
-			return new CssAttributeNamespaceSelector(ns);
+			return new CssAttributeSelector(localName, matchOperator, matchOperand);
 		}
 
 		public static CssSimpleSelector WithId(string id)
@@ -236,41 +226,6 @@
 			{
 				AddNamespace(AnyNamespacePrefix, AnyNamespace.NamespaceName);
 			}
-		}
-
-		#endregion
-
-		#region Protected methods
-
-		protected static void ToString(StringBuilder sb, XName name, IXmlNamespaceResolver namespaceResolver)
-		{
-			if (name.Namespace != XNamespace.None)
-			{
-				var defaultNamespace = namespaceResolver?.LookupNamespace("");
-				if (!string.IsNullOrEmpty(defaultNamespace) && name.NamespaceName != defaultNamespace)
-				{
-					var namespacePrefix = name.Namespace == AnyNamespace
-						? AnyNamespacePrefix
-						: namespaceResolver.LookupPrefix(name.NamespaceName);
-					// We must write a namespace prefix when a default namespace has been defined 
-					// and the default namespace differs from the namespace of the name.
-					sb.Append(namespacePrefix).Append('|');
-				}
-			}
-			sb.Append(name.LocalName);
-		}
-
-		protected static void ToString(StringBuilder sb, XNamespace ns, IXmlNamespaceResolver namespaceResolver)
-		{
-			if (ns == AnyNamespace)
-			{
-				sb.Append(AnyNamespace).Append("|");
-			}
-			else if (ns != XNamespace.None)
-			{
-				sb.Append(namespaceResolver.LookupPrefix(ns.NamespaceName)).Append("|");
-			}
-			sb.Append(AnyLocalName);
 		}
 
 		#endregion

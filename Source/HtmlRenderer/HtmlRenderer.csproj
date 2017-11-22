@@ -58,8 +58,6 @@
     <Compile Include="Core\Css\Parsing\CssReader.cs" />
     <Compile Include="Core\Css\Parsing\CssStylesheetGrammar.cs" />
     <Compile Include="Core\Css\Parsing\CssTokenizerSettings.cs" />
-    <Compile Include="Core\Css\Selectors\CssAttributeNameSelector.cs" />
-    <Compile Include="Core\Css\Selectors\CssAttributeNamespaceSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssAttributeSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssCombinator.cs" />

@@ -204,13 +204,54 @@
 		#region Attribute selectors
 
 		[Test]
+		public void AttributeSelector_ForLocalNameWithoutNamespace_WithAnyValue()
+		{
+			var selector = CssSelector.WithAttribute(XNamespace.None + "href");
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
+				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
+				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
+				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
+			});
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameWithoutNamespace_WithAnyValue_ToString()
+		{
+			Assert.That(CssSelector.WithAttribute(XNamespace.None + "href").ToString(_namespaceManager), Is.EqualTo("[href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameWithoutNamespace_WithExactValue()
+		{
+			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "\"#some-target\"");
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
+				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
+				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Exact), nameof(selector.MatchOperator));
+				Assert.That(selector.MatchOperand, Is.EqualTo("\"#some-target\""), nameof(selector.MatchOperand));
+			});
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameWithoutNamespace_WithExactValue_ToString()
+		{
+			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "\"#some-target\"");
+			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[href=\"#some-target\"]"));
+		}
+
+		[Test]
 		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue()
 		{
-			var selector = CssSelector.WithAttribute("href");
+			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
+				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
+				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
 			});
 		}
 
@@ -218,39 +259,87 @@
 		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_ToString_WhenDefaultNamespaceExists()
 		{
 			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithAttribute("href").ToString(_namespaceManager), Is.EqualTo("[*|href]"));
+			Assert.That(CssSelector.WithAttribute(XName.Get("href", "*")).ToString(_namespaceManager), Is.EqualTo("[*|href]"));
 		}
 
 		[Test]
 		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_ToString_WhenNoDefaultNamespaceExists()
 		{
-			Assert.That(CssSelector.WithAttribute("href").ToString(_namespaceManager), Is.EqualTo("[href]"));
+			Assert.That(CssSelector.WithAttribute(XName.Get("href", "*")).ToString(_namespaceManager), Is.EqualTo("[*|href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameInAnyNamespace_WithValueContainingWord()
+		{
+			var selector = CssSelector.WithAttribute(XName.Get("href", "*"), CssAttributeMatchOperator.ContainsWord, "test");
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
+				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
+				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.ContainsWord), nameof(selector.MatchOperator));
+				Assert.That(selector.MatchOperand, Is.EqualTo("test"), nameof(selector.MatchOperand));
+			});
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameInAnyNamespace_WithValueContainingWord_ToString()
+		{
+			var selector = CssSelector.WithAttribute(XName.Get("href", "*"), CssAttributeMatchOperator.ContainsWord, "test");
+			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[*|href~=test]"));
 		}
 
 		[Test]
 		public void AttributeSelector_ForQualifiedName_WithAnyValue()
 		{
-			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
 
 			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE));
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
+				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
+				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
 			});
 		}
 
 		[Test]
-		public void AttributeSelector_ForNamespace_WithAnyValue()
+		public void AttributeSelector_ForQualifiedName_WithAnyValue_ToString_WhenDefaultNamespaceExists()
 		{
-			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+			_namespaceManager.AddNamespace("", SOME_NAMESPACE);
+			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
+			Assert.That(CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("[x|href]"));
+		}
 
-			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE));
+		[Test]
+		public void AttributeSelector_ForQualifiedName_WithAnyValue_ToString_WhenNoDefaultNamespaceExists()
+		{
+			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
+			Assert.That(CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("[x|href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForQualifiedName_WithValueIsLanguageCode()
+		{
+			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
+
+			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
+				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.LanguageCode), nameof(selector.MatchOperator));
+				Assert.That(selector.MatchOperand, Is.EqualTo("fr"), nameof(selector.MatchOperand));
 			});
+		}
+
+		[Test]
+		public void AttributeSelector_ForQualifiedName_WithValueIsLanguageCode_ToString()
+		{
+			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
+
+			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
+			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[x|href|=fr]"));
 		}
 
 		#endregion

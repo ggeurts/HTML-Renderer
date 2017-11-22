@@ -5,38 +5,47 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System.Text;
 	using System.Xml;
 	using System.Xml.Linq;
+	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	/// <summary>
 	/// Represents a selector for elements that have an attribute with a given local name and/or namespace and/or whose value
 	/// meets a given string matching criterion.
 	/// </summary>
-	public abstract class CssAttributeSelector : CssSimpleSelector
+	public class CssAttributeSelector : CssSimpleSelector
 	{
 		private static readonly Func<string, StringComparison, bool> Always = (s, c) => true;
 		private static readonly Func<string, StringComparison, bool> Never = (s, c) => false;
 
+		private readonly XName _name;
 		private readonly CssAttributeMatchOperator _matchOperator;
 		private readonly string _matchOperand;
 		private Func<string, StringComparison, bool> _predicate;
 
-		protected CssAttributeSelector()
-		{}
-
-		protected CssAttributeSelector(CssAttributeMatchOperator matchOperator, string matchOperand)
+		internal CssAttributeSelector(XName name)
 		{
+			ArgChecker.AssertArgNotNull(name, nameof(name));
+			_name = name;
+		}
+
+		internal CssAttributeSelector(XName name, CssAttributeMatchOperator matchOperator, string matchOperand)
+		{
+			ArgChecker.AssertArgNotNull(name, nameof(name));
+			_name = name;
 			_matchOperator = matchOperator;
 			_matchOperand = matchOperand;
 		}
 
-		/// <summary>
-		/// Gets local name of matching attributes.
-		/// </summary>
-		public abstract string LocalName { get; }
+		internal CssAttributeSelector(string localName)
+		{
+			_name = AnyNamespace + localName;
+		}
 
-		/// <summary>
-		/// Gets namespace of matching attributes.
-		/// </summary>
-		public abstract XNamespace Namespace { get; }
+		internal CssAttributeSelector(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
+		{
+			_name = AnyNamespace + localName;
+			_matchOperator = matchOperator;
+			_matchOperand = matchOperand;
+		}
 
 		/// <summary>
 		/// Gets operator for matching of attribute values to <see cref="MatchOperand"/>.
@@ -59,20 +68,43 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			get { return _predicate ?? (_predicate = CreatePredicate(_matchOperator, _matchOperand)); }
 		}
 
+		public virtual string LocalName
+		{
+			get { return _name.LocalName; }
+		}
+
+		public virtual XNamespace Namespace
+		{
+			get { return _name.Namespace; }
+		}
+
 		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
+			sb.Append('[');
+
+			if (_name.Namespace != XNamespace.None)
+			{
+				var namespacePrefix = _name.Namespace == AnyNamespace
+					? AnyNamespacePrefix
+					: namespaceResolver.LookupPrefix(_name.NamespaceName);
+				// We must write a namespace prefix for any explicit namespace. The default namespace
+				// does not apply to attributes.
+				sb.Append(namespacePrefix).Append('|');
+			}
+			sb.Append(_name.LocalName);
+
 			if (_matchOperator != CssAttributeMatchOperator.Any)
 			{
 				if (_matchOperator != CssAttributeMatchOperator.Exact)
 				{
 					sb.Append((char)_matchOperator);
 				}
-				sb.Append('=')
-					.Append('"')
-					.Append(_matchOperand.Replace("\"", "\\\""))
-					.Append('"');
+				sb.Append('=').Append(_matchOperand);
 			}
+
+			sb.Append(']');
 		}
+
 
 		private static Func<string, StringComparison, bool> CreatePredicate(CssAttributeMatchOperator matchOperator, string operand)
 		{
@@ -138,6 +170,34 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 				default:
 					return false;
 			}
+		}
+
+		/// <inheritdoc />
+		public override bool Matches<TElement>(TElement element)
+		{
+			return _name.Namespace == AnyNamespace
+				? element.HasAttribute(_name.LocalName, this.Predicate)
+				: element.HasAttribute(_name, this.Predicate);
+		}
+
+		public override bool Equals(object obj)
+		{
+			var other = obj as CssAttributeSelector;
+			return other != null
+			       && _name == other._name
+			       && _matchOperator == other._matchOperator
+			       && _matchOperand == other._matchOperand;
+		}
+
+		public override int GetHashCode()
+		{
+			var hash = _name.GetHashCode();
+			if (this.MatchOperator != CssAttributeMatchOperator.Any)
+			{
+				hash = HashUtility.Hash(hash, (int)this.MatchOperator);
+				hash = HashUtility.Hash(hash, this.MatchOperand.GetHashCode());
+			}
+			return hash;
 		}
 	}
 }

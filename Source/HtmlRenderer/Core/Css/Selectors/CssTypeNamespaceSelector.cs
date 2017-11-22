@@ -44,7 +44,15 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
-			ToString(sb, _namespace, namespaceResolver);
+			if (_namespace == AnyNamespace)
+			{
+				sb.Append(AnyNamespace).Append("|");
+			}
+			else if (_namespace != XNamespace.None)
+			{
+				sb.Append(namespaceResolver.LookupPrefix(_namespace.NamespaceName)).Append("|");
+			}
+			sb.Append(AnyLocalName);
 		}
 	}
 }
