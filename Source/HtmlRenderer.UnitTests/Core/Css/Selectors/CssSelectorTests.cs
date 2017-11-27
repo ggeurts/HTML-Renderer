@@ -444,6 +444,69 @@
 
 		#endregion
 
+		#region Class selectors
+
+		[Test]
+		public void ClassSelector_ToString()
+		{
+			Assert.That(CssSelector.WithClass("sect").ToString(), Is.EqualTo(".sect"));
+		}
+
+		[Test]
+		public void ClassSelector_Matches()
+		{
+			var selector = CssSelector.WithClass("sect");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html>
+					<head />
+					<body>
+						<p id='par1' class='sect' />
+						<p id='par2' class='section' />
+						<p id='par3' class='sect note' />
+						<p id='par4' class='right sect note' />
+						<p id='par5' class='right sect' />
+						<p id='par6' class='' />
+						<p id='par7' />
+					</body>
+				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+
+			var matchingElements = xdoc.Descendants(XName.Get("p")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "par1", "par3", "par4", "par5" }));
+		}
+
+		#endregion
+
+		#region ID selectors
+
+		[Test]
+		public void IdSelector_ToString()
+		{
+			Assert.That(CssSelector.WithId("par1").ToString(), Is.EqualTo("#par1"));
+		}
+
+		[Test]
+		public void IdSelector_Matches()
+		{
+			var selector = CssSelector.WithId("par1");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html>
+					<head />
+					<body>
+						<p id='par1' />
+						<p id='par2' />
+						<p id='par1b' />
+						<p id='PAR1' />
+						<p id='' />
+						<p />
+					</body>
+				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+
+			var matchingElements = xdoc.Descendants(XName.Get("p")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "par1" }));
+		}
+
+		#endregion
+
 		#region Factory methods
 
 		private XElementInfo CreateElement(string localName, string ns = null)
