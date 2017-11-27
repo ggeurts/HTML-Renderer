@@ -60,6 +60,7 @@
 		/// to match elements without a namespace.
 		/// </summary>
 		/// <param name="ns">The namespace name.</param>
+		/// <returns>The newly created selector.</returns>
 		public static CssTypeSelector WithNamespace(XNamespace ns)
 		{
 			return new CssTypeNamespaceSelector(ns);
@@ -70,6 +71,7 @@
 		/// to match elements without a namespace.
 		/// </summary>
 		/// <param name="name">The qualified name of matching elements.</param>
+		/// <returns>The newly created selector.</returns>
 		public static CssTypeSelector WithName(XName name)
 		{
 			return new CssTypeNameSelector(name);
@@ -79,6 +81,7 @@
 		/// Creates selector that matches elements with given local name in any namespace, including those without a namespace.
 		/// </summary>
 		/// <param name="localName">The local name of matching elements.</param>
+		/// <returns>The newly created selector.</returns>
 		public static CssTypeSelector WithLocalName(string localName)
 		{
 			return new CssTypeNameSelector(localName);
@@ -88,6 +91,7 @@
 		/// Creates selector for elements that have a certain attribute.
 		/// </summary>
 		/// <param name="name">Qualified name of matching attributes.</param>
+		/// <returns>The newly created selector.</returns>
 		public static CssAttributeSelector WithAttribute(XName name)
 		{
 			return new CssAttributeSelector(name);
@@ -99,6 +103,7 @@
 		/// <param name="name">Qualified name of matching attributes.</param>
 		/// <param name="matchOperator">An attribute string value matching operator.</param>
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
+		/// <returns>The newly created selector.</returns>
 		public static CssAttributeSelector WithAttribute(XName name, CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
 			return WithAttribute(name, matchOperator, new CssStringToken(CssTokenType.QuotedString | CssTokenType.Quote, matchOperand));
@@ -110,6 +115,7 @@
 		/// <param name="name">Qualified name of matching attributes.</param>
 		/// <param name="matchOperator">An attribute string value matching operator.</param>
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
+		/// <returns>The newly created selector.</returns>
 		internal static CssAttributeSelector WithAttribute(XName name, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
 		{
 			return new CssAttributeSelector(name, matchOperator, matchOperand);
@@ -119,6 +125,7 @@
 		/// Creates selector for elements that have an attribute with a given name in any namespace, including those without a namespace.
 		/// </summary>
 		/// <param name="localName">The local name of matching attributes.</param>
+		/// <returns>The newly created selector.</returns>
 		public static CssAttributeSelector WithAttribute(string localName)
 		{
 			return new CssAttributeSelector(localName);
@@ -130,6 +137,7 @@
 		/// <param name="localName">The local name of matching attributes.</param>
 		/// <param name="matchOperator">An attribute string value matching operator.</param>
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
+		/// <returns>The newly created selector.</returns>
 		internal CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
 			return WithAttribute(localName, matchOperator, new CssStringToken(CssTokenType.QuotedString | CssTokenType.Quote, matchOperand));
@@ -141,22 +149,38 @@
 		/// <param name="localName">The local name of matching attributes.</param>
 		/// <param name="matchOperator">An attribute string value matching operator.</param>
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
+		/// <returns>The newly created selector.</returns>
 		internal CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
 		{
 			return new CssAttributeSelector(localName, matchOperator, matchOperand);
 		}
 
+		/// <summary>
+		/// Creates selector for element that has a given identifier.
+		/// </summary>
+		/// <param name="id">Identifier of matching element.</param>
+		/// <returns>The newly created selector.</returns>
 		public static CssSimpleSelector WithId(string id)
 		{
 			return new CssIdSelector(id);
 		}
 
+		/// <summary>
+		/// Creates selector for elements that have a given CSS class.
+		/// </summary>
+		/// <param name="name">The CSS class name.</param>
+		/// <returns>The newly created selector.</returns>
 		public static CssSimpleSelector WithClass(string name)
 		{
 			return new CssClassSelector(name);
 		}
 
-		public static CssSimpleSelector WithPseudoClass(string name)
+		/// <summary>
+		/// Creates selector for elements that match a given non-parameterized CSS pseudo-class.
+		/// </summary>
+		/// <param name="name">The CSS pseudo-class name.</param>
+		/// <returns>The selector for the given CSS pseudo-class name.</returns>
+		public static CssSelector WithPseudoClass(string name)
 		{
 			ArgChecker.AssertArgNotNull(name, nameof(name));
 
@@ -166,32 +190,29 @@
 				: new CssUnknownPseudoClassSelector(name);
 		}
 
-		public static CssSimpleSelector NthChild(int cycleSize, int offset)
+		public static CssSelector NthChild(int cycleSize, int offset)
 		{
 			return new CssNthChildPseudoClassSelector(cycleSize, offset);
 		}
 
-		public static CssSimpleSelector NthLastChild(int cycleSize, int offset)
+		public static CssSelector NthLastChild(int cycleSize, int offset)
 		{
 			return new CssNthLastChildPseudoClassSelector(cycleSize, offset);
 		}
 
-		public static CssSimpleSelector NthOfType(int cycleSize, int offset)
+		public static CssSelector NthOfType(int cycleSize, int offset)
 		{
 			return new CssNthOfTypePseudoClassSelector(cycleSize, offset);
 		}
 
-		public static CssSimpleSelector NthLastOfType(int cycleSize, int offset)
+		public static CssSelector NthLastOfType(int cycleSize, int offset)
 		{
 			return new CssNthLastOfTypePseudoClassSelector(cycleSize, offset);
 		}
 
-		public static CssSimpleSelector Not(CssSimpleSelector selector)
+		public static CssSelector Not(CssSimpleSelector selector)
 		{
-			var notSelector = selector as CssNotPseudoClassSelector;
-			return notSelector == null
-				? new CssNotPseudoClassSelector(selector)
-				: notSelector.Selector;
+			return new CssNotPseudoClassSelector(selector);
 		}
 
 		public static CssCombinatorSelector Combinator(CssCombinator combinator, ICssSelectorSequence firstSequence)

@@ -4,6 +4,7 @@
 	using System.Linq;
 	using System.Xml;
 	using System.Xml.Linq;
+	using NSubstitute;
 	using NUnit.Framework;
 	using TheArtOfDev.HtmlRenderer.Core.Css.Selectors;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
@@ -43,6 +44,7 @@
 			var selector = CssSelector.Universal;
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("*"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
@@ -86,6 +88,7 @@
 			var selector = CssSelector.WithLocalName("h1");
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
@@ -120,6 +123,7 @@
 
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
@@ -163,6 +167,7 @@
 			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
@@ -209,6 +214,7 @@
 			var selector = CssSelector.WithAttribute(XNamespace.None + "href");
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
@@ -236,7 +242,7 @@
 					</body>
 				</html>");
 
-			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements, Has.Count.EqualTo(1));
 			Assert.That(matchingElements[0].Attribute("id").Value, Is.EqualTo("anchor1"));
 		}
@@ -247,6 +253,7 @@
 			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "#some-target");
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Exact), nameof(selector.MatchOperator));
@@ -274,7 +281,7 @@
 					</body>
 				</html>");
 
-			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements, Has.Count.EqualTo(1));
 			Assert.That(matchingElements[0].Attribute("id").Value, Is.EqualTo("anchor2"));
 		}
@@ -285,6 +292,7 @@
 			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
@@ -321,7 +329,7 @@
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor1", "anchor2" }));
 		}
 
@@ -331,6 +339,7 @@
 			var selector = CssSelector.WithAttribute(XName.Get("href", "*"), CssAttributeMatchOperator.ContainsWord, "test");
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.ContainsWord), nameof(selector.MatchOperator));
@@ -362,7 +371,7 @@
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor2", "anchor3", "anchor4" }));
 		}
 
@@ -374,6 +383,7 @@
 			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE));
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
@@ -404,6 +414,7 @@
 			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
 			Assert.Multiple(() =>
 			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.LanguageCode), nameof(selector.MatchOperator));
@@ -438,13 +449,20 @@
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor2", "anchor4" }));
 		}
 
 		#endregion
 
 		#region Class selectors
+
+		[Test]
+		public void ClassSelector()
+		{
+			var selector = CssSelector.WithClass("sect");
+			Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
+		}
 
 		[Test]
 		public void ClassSelector_ToString()
@@ -470,13 +488,20 @@
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var matchingElements = xdoc.Descendants(XName.Get("p")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "par1", "par3", "par4", "par5" }));
 		}
 
 		#endregion
 
 		#region ID selectors
+
+		[Test]
+		public void IdSelector()
+		{
+			var selector = CssSelector.WithId("par1");
+			Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
+		}
 
 		[Test]
 		public void IdSelector_ToString()
@@ -501,10 +526,65 @@
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var matchingElements = xdoc.Descendants(XName.Get("p")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "par1" }));
 		}
 
+		#endregion
+
+		#region Pseudo class selectors
+
+		[Test]
+		public void PseudoClassSelector_ForStandardPseudoclass()
+		{
+			var selector = CssSelector.WithPseudoClass("target");
+			Assert.That(selector, Is.Not.InstanceOf<CssSimpleSelector>());
+		}
+
+		[Test]
+		public void PseudoClassSelector_ForNonStandardPseudoclass()
+		{
+			var selector = CssSelector.WithPseudoClass("unknown");
+			Assert.That(selector, Is.Not.InstanceOf<CssSimpleSelector>());
+		}
+
+		[Test]
+		public void PseudoClassSelector_TargetPseudoClass_ToString()
+		{
+			Assert.That(CssSelector.WithPseudoClass("target").ToString(), Is.EqualTo(":target"));
+		}
+
+		[Test]
+		public void PseudoClassSelector_TargetPseudoClass_Matches()
+		{
+			var selector = CssSelector.WithPseudoClass("target");
+
+			var pseudoClassInfo = Substitute.For<XElementPseudoClassInfo>();
+			pseudoClassInfo.IsTarget(Arg.Any<XElement>())
+				.Returns(call => "true".Equals(call.Arg<XElement>().Attribute("istarget")?.Value, StringComparison.OrdinalIgnoreCase));
+
+			var xdoc = XDocument.Parse(@"
+				<html>
+					<head />
+					<body>
+						<h1 id='ch1' />
+						<h1 id='ch2' istarget='true' />
+						<h1 id='ch3' />
+					</body>
+				</html>");
+
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e, pseudoClassInfo))).ToList();
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "ch2" }));
+		}
+
+		// TODO: Don't allow arbitrary parameterized pseudo classes such as :lang() or :nth-child()
+		// TODO: Add tests for :lang() and :nth-child() type selectors
+
+		#endregion
+
+		#region Combinator tests
+
+		
 		#endregion
 
 		#region Factory methods
@@ -518,16 +598,33 @@
 
 		#region Inner classes
 
+		public class XElementPseudoClassInfo
+		{
+			public static readonly XElementPseudoClassInfo Default = new XElementPseudoClassInfo();
+
+			public virtual bool IsTarget(XElement element)
+			{
+				return false;
+			}
+
+			public virtual bool HasDynamicState(XElement element, CssDynamicElementState state)
+			{
+				return false;
+			}
+		}
+
 		private struct XElementInfo : IElementInfo<XElementInfo>
 		{
 			private static readonly XName ClassAttributeName = XNamespace.None + "class";
 			private static readonly XName IdAttributeName = XNamespace.None + "id";
 
 			private readonly XElement _element;
+			private readonly XElementPseudoClassInfo _pseudoClassInfo;
 
-			public XElementInfo(XElement element)
+			public XElementInfo(XElement element, XElementPseudoClassInfo pseudoClassInfo = null)
 			{
 				_element = element;
+				_pseudoClassInfo = pseudoClassInfo;
 			}
 
 			public XElementInfo Parent
@@ -547,7 +644,7 @@
 
 			public bool IsTarget
 			{
-				get { return false; }
+				get { return (_pseudoClassInfo ?? XElementPseudoClassInfo.Default).IsTarget(_element); }
 			}
 
 			public int ChildCount
@@ -644,7 +741,7 @@
 
 			public bool HasDynamicState(CssDynamicElementState state)
 			{
-				return false;
+				return (_pseudoClassInfo ?? XElementPseudoClassInfo.Default).HasDynamicState(_element, state);
 			}
 
 			public bool TryGetPredecessor(ICssSelector selector, bool immediateOnly, out XElementInfo result)
