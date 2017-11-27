@@ -5,6 +5,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System.Text;
 	using System.Xml;
 	using System.Xml.Linq;
+	using TheArtOfDev.HtmlRenderer.Core.Css.Parsing;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	/// <summary>
@@ -18,7 +19,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		private readonly XName _name;
 		private readonly CssAttributeMatchOperator _matchOperator;
-		private readonly string _matchOperand;
+		private readonly CssStringToken _matchOperand;
 		private Func<string, StringComparison, bool> _predicate;
 
 		internal CssAttributeSelector(XName name)
@@ -27,7 +28,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			_name = name;
 		}
 
-		internal CssAttributeSelector(XName name, CssAttributeMatchOperator matchOperator, string matchOperand)
+		internal CssAttributeSelector(XName name, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
 		{
 			ArgChecker.AssertArgNotNull(name, nameof(name));
 			_name = name;
@@ -40,7 +41,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			_name = AnyNamespace + localName;
 		}
 
-		internal CssAttributeSelector(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
+		internal CssAttributeSelector(string localName, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
 		{
 			_name = AnyNamespace + localName;
 			_matchOperator = matchOperator;
@@ -60,12 +61,12 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		/// </summary>
 		public string MatchOperand
 		{
-			get { return _matchOperand; }
+			get { return _matchOperand?.StringValue; }
 		}
 
 		public Func<string, StringComparison, bool> Predicate
 		{
-			get { return _predicate ?? (_predicate = CreatePredicate(_matchOperator, _matchOperand)); }
+			get { return _predicate ?? (_predicate = CreatePredicate(_matchOperator, _matchOperand?.StringValue)); }
 		}
 
 		public virtual string LocalName
@@ -99,7 +100,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 				{
 					sb.Append((char)_matchOperator);
 				}
-				sb.Append('=').Append(_matchOperand);
+				sb.Append('=');
+				_matchOperand?.ToString(sb);
 			}
 
 			sb.Append(']');
@@ -139,12 +141,13 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		private static bool ContainsWord(string text, string word, StringComparison stringComparison)
 		{
+			ArgChecker.AssertArgNotNull(word, nameof(word));
 			if (text == null) return false;
 
 			var index = text.IndexOf(word, stringComparison);
 			return index >= 0
-			       && (index == 0 || IsWhitespace(text[index]))
-			       && (index + word.Length >= text.Length || IsWhitespace(text[index + word.Length]));
+				&& (index == 0 || IsWhitespace(text[index - 1]))
+				&& (index + word.Length >= text.Length || IsWhitespace(text[index + word.Length]));
 		}
 
 		private static bool ContainsWhitespace(string text)
@@ -186,7 +189,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			return other != null
 			       && _name == other._name
 			       && _matchOperator == other._matchOperator
-			       && _matchOperand == other._matchOperand;
+			       && Equals(_matchOperand, other._matchOperand);
 		}
 
 		public override int GetHashCode()

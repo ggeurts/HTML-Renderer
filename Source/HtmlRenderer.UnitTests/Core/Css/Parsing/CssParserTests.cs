@@ -186,8 +186,8 @@
 			get
 			{
 				yield return new TestCaseData("id", _tokenFactory.CreateIdentifierToken("id"));
-				yield return new TestCaseData("\"some value\"", _tokenFactory.CreateStringToken("some value"));
-				yield return new TestCaseData("'other value'", _tokenFactory.CreateStringToken("other value"));
+				yield return new TestCaseData("\"some value\"", _tokenFactory.CreateQuotedStringToken("some value", '"'));
+				yield return new TestCaseData("'other value'", _tokenFactory.CreateQuotedStringToken("other value", '\''));
 				yield return new TestCaseData("12", _tokenFactory.CreateNumericToken(false, "12"));
 				yield return new TestCaseData("-14", _tokenFactory.CreateNumericToken(false, "-14"));
 				yield return new TestCaseData("12.34e-5", _tokenFactory.CreateNumericToken(true, "12.34e-5"));

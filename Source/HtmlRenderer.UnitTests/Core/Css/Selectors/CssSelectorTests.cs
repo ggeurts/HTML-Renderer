@@ -219,27 +219,64 @@
 		[Test]
 		public void AttributeSelector_ForLocalNameWithoutNamespace_WithAnyValue_ToString()
 		{
-			Assert.That(CssSelector.WithAttribute(XNamespace.None + "href").ToString(_namespaceManager), Is.EqualTo("[href]"));
+			var selector = CssSelector.WithAttribute(XNamespace.None + "href");
+			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameWithoutNamespace_WithAnyValue_MatchesByLocalName()
+		{
+			var selector = CssSelector.WithAttribute(XNamespace.None + "href");
+			var xdoc = XDocument.Parse(@"
+				<html>
+					<head />
+					<body>
+						<a id='anchor1' href='http://some.where.else' />
+						<a id='anchor2' />
+					</body>
+				</html>");
+
+			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements, Has.Count.EqualTo(1));
+			Assert.That(matchingElements[0].Attribute("id").Value, Is.EqualTo("anchor1"));
 		}
 
 		[Test]
 		public void AttributeSelector_ForLocalNameWithoutNamespace_WithExactValue()
 		{
-			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "\"#some-target\"");
+			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "#some-target");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Exact), nameof(selector.MatchOperator));
-				Assert.That(selector.MatchOperand, Is.EqualTo("\"#some-target\""), nameof(selector.MatchOperand));
+				Assert.That(selector.MatchOperand, Is.EqualTo("#some-target"), nameof(selector.MatchOperand));
 			});
 		}
 
 		[Test]
 		public void AttributeSelector_ForLocalNameWithoutNamespace_WithExactValue_ToString()
 		{
-			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "\"#some-target\"");
+			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "#some-target");
 			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[href=\"#some-target\"]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameWithoutNamespace_WithExactValue_MatchesByLocalName()
+		{
+			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "#another-target");
+			var xdoc = XDocument.Parse(@"
+				<html>
+					<head />
+					<body>
+						<a id='anchor1' href='#some-target' />
+						<a id='anchor2' href='#another-target' />
+					</body>
+				</html>");
+
+			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements, Has.Count.EqualTo(1));
+			Assert.That(matchingElements[0].Attribute("id").Value, Is.EqualTo("anchor2"));
 		}
 
 		[Test]
@@ -259,13 +296,33 @@
 		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_ToString_WhenDefaultNamespaceExists()
 		{
 			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithAttribute(XName.Get("href", "*")).ToString(_namespaceManager), Is.EqualTo("[*|href]"));
+			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
+			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[*|href]"));
 		}
 
 		[Test]
 		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_ToString_WhenNoDefaultNamespaceExists()
 		{
-			Assert.That(CssSelector.WithAttribute(XName.Get("href", "*")).ToString(_namespaceManager), Is.EqualTo("[*|href]"));
+			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
+			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[*|href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_Matches()
+		{
+			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html xmlns:s='{0}' xmlns:t='{1}'>
+					<head />
+					<body>
+						<a id='anchor1' href='#some-target' />
+						<a id='anchor2' s:href='#another-target' />
+						<a id='anchor3' />
+					</body>
+				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+
+			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor1", "anchor2" }));
 		}
 
 		[Test]
@@ -285,7 +342,28 @@
 		public void AttributeSelector_ForLocalNameInAnyNamespace_WithValueContainingWord_ToString()
 		{
 			var selector = CssSelector.WithAttribute(XName.Get("href", "*"), CssAttributeMatchOperator.ContainsWord, "test");
-			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[*|href~=test]"));
+			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[*|href~=\"test\"]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForLocalNameInAnyNamespace_WithValueContainingWord_Matches()
+		{
+			var selector = CssSelector.WithAttribute(XName.Get("href", "*"), CssAttributeMatchOperator.ContainsWord, "test");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html xmlns:s='{0}' xmlns:t='{1}'>
+					<head />
+					<body>
+						<a id='anchor1' href='blurb' />
+						<a id='anchor2' s:href='blurb with test' />
+						<a id='anchor3' t:href='test' />
+						<a id='anchor4' t:href='a test too' />
+						<a id='anchor5' t:href='more tests' />
+						<a id='anchor6' />
+					</body>
+				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+
+			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor2", "anchor3", "anchor4" }));
 		}
 
 		[Test]
@@ -338,8 +416,30 @@
 		{
 			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
 
-			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
-			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[x|href|=fr]"));
+			var selector = CssSelector.WithAttribute(XName.Get("lang", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
+			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[x|lang|=\"fr\"]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForQualifiedName_WithValueIsLanguageCode_Matches()
+		{
+			var selector = CssSelector.WithAttribute(XName.Get("lang", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html xmlns:s='{0}' xmlns:t='{1}'>
+					<head />
+					<body>
+						<a id='anchor1' s:lang='nl' />
+						<a id='anchor2' s:lang='fr' />
+						<a id='anchor3' s:lang='french' />
+						<a id='anchor4' s:lang='fr-FR' />
+						<a id='anchor5' s:lang='-fr' />
+						<a id='anchor6' t:lang='fr' />
+						<a id='anchor7' />
+					</body>
+				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+
+			var matchingElements = xdoc.Descendants(XName.Get("a")).Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor2", "anchor4" }));
 		}
 
 		#endregion

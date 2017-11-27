@@ -4,6 +4,7 @@
 	using System.Text;
 	using System.Xml;
 	using System.Xml.Linq;
+	using TheArtOfDev.HtmlRenderer.Core.Css.Parsing;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public abstract class CssSelector : CssComponent
@@ -100,6 +101,17 @@
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
 		public static CssAttributeSelector WithAttribute(XName name, CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
+			return WithAttribute(name, matchOperator, new CssStringToken(CssTokenType.QuotedString | CssTokenType.Quote, matchOperand));
+		}
+
+		/// <summary>
+		/// Creates selector for elements that have an attribute whose value satisfies a given predicate.
+		/// </summary>
+		/// <param name="name">Qualified name of matching attributes.</param>
+		/// <param name="matchOperator">An attribute string value matching operator.</param>
+		/// <param name="matchOperand">The value to which attribute values are matched.</param>
+		internal static CssAttributeSelector WithAttribute(XName name, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
+		{
 			return new CssAttributeSelector(name, matchOperator, matchOperand);
 		}
 
@@ -118,7 +130,18 @@
 		/// <param name="localName">The local name of matching attributes.</param>
 		/// <param name="matchOperator">An attribute string value matching operator.</param>
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
-		public CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
+		internal CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
+		{
+			return WithAttribute(localName, matchOperator, new CssStringToken(CssTokenType.QuotedString | CssTokenType.Quote, matchOperand));
+		}
+
+		/// <summary>
+		/// Creates selector for elements that have an attribute whose value satisfies a given predicate.
+		/// </summary>
+		/// <param name="localName">The local name of matching attributes.</param>
+		/// <param name="matchOperator">An attribute string value matching operator.</param>
+		/// <param name="matchOperand">The value to which attribute values are matched.</param>
+		internal CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
 		{
 			return new CssAttributeSelector(localName, matchOperator, matchOperand);
 		}

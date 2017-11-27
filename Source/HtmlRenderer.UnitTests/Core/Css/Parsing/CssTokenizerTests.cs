@@ -134,7 +134,7 @@
 		[TestCase(@"'Some value'")]
 		public void TokenizeStringToken(string css)
 		{
-			VerifyTokenizer(css, StringLiteral("Some value"));
+			VerifyTokenizer(css, StringLiteral("Some value", css[0]));
 		}
 
 		[Test]
@@ -143,7 +143,7 @@
 		[TestCase("\"Some\fValue\"")]
 		public void TokenizeStringWithUnescapedNewLine(string css)
 		{
-			VerifyTokenizer(css, StringLiteral("Some", false), WhiteSpace, Identifier("Value"));
+			VerifyTokenizer(css, StringLiteral("Some", css[0], false), WhiteSpace, Identifier("Value"));
 		}
 
 		[Test]
@@ -159,7 +159,7 @@
 		[TestCase("'Some \\'value\\'")]
 		public void TokenizeStringTokenWithEmbeddedSingleQuotes(string css)
 		{
-			VerifyTokenizer(css, StringLiteral("Some 'value'"));
+			VerifyTokenizer(css, StringLiteral("Some 'value'", css[0]));
 		}
 
 		#endregion
@@ -283,7 +283,7 @@
 		[TestCase("url('http://example.com/some.css')")]
 		public void TokenizeUrlFunctionTokenWithoutWhitespace(string css)
 		{
-			VerifyTokenizer(css, Function("url("), StringLiteral("http://example.com/some.css"), Delimiter(')'));
+			VerifyTokenizer(css, Function("url("), StringLiteral("http://example.com/some.css", css[4]), Delimiter(')'));
 		}
 
 		[Test]
@@ -291,7 +291,7 @@
 		[TestCase("url( 'http://example.com/some.css' )")]
 		public void TokenizeUrlFunctionTokenWithWhitespace(string css)
 		{
-			VerifyTokenizer(css, Function("url("), WhiteSpace, StringLiteral("http://example.com/some.css"), WhiteSpace, Delimiter(')'));
+			VerifyTokenizer(css, Function("url("), WhiteSpace, StringLiteral("http://example.com/some.css", css[5]), WhiteSpace, Delimiter(')'));
 		}
 
 		#endregion
@@ -572,9 +572,9 @@
 			return new TokenData(CssTokenType.Percentage | (isFloatingPoint ? CssTokenType.FloatingPointType : 0), new CssNumeric(value, "%"));
 		}
 
-		private static TokenData StringLiteral(string value, bool isValid = true)
+		private static TokenData StringLiteral(string value, char quoteChar = '"', bool isValid = true)
 		{
-			return new TokenData(CssTokenType.QuotedString | (isValid ? 0 : CssTokenType.Invalid), value);
+			return new TokenData(CssTokenType.QuotedString | (CssTokenType)quoteChar | (isValid ? 0 : CssTokenType.Invalid), value);
 		}
 
 		private static TokenData Token(CssTokenType tokenType)

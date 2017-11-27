@@ -250,7 +250,7 @@
 					case '\r':
 					case '\f':
 						NotifyError("Unescaped newline character in quoted string literal.");
-						return TokenFactory.CreateStringToken(BuildValue(), true);
+						return TokenFactory.CreateQuotedStringToken(BuildValue(), (char)delimiter, true);
 
 					case '\\':
 						var ch1 = _reader.Peek(1);
@@ -282,7 +282,7 @@
 				}
 			}
 
-			return TokenFactory.CreateStringToken(BuildValue(), false);
+			return TokenFactory.CreateQuotedStringToken(BuildValue(), (char)delimiter);
 		}
 
 		private string ConsumeUrl(out bool isInvalid)
@@ -403,7 +403,7 @@
 				return true;
 			}
 
-			result = TokenFactory.CreateNumericToken(isFloatingPoint, value, null);
+			result = TokenFactory.CreateNumericToken(isFloatingPoint, value);
 			return true;
 		}
 

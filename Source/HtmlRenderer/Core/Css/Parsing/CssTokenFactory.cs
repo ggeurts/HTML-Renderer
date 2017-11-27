@@ -69,9 +69,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 			return GetOrCreateStringToken(CssTokenType.AtKeyword, value);
 		}
 
-		public CssToken CreateStringToken(string value, bool isInvalid = false)
+		public CssToken CreateQuotedStringToken(string value, char quoteChar, bool isInvalid = false)
 		{
-			var tokenType = CssTokenType.QuotedString;
+			var tokenType = CssTokenType.QuotedString | (CssTokenType)(quoteChar & 0xFF);
 			if (isInvalid) tokenType |= CssTokenType.Invalid;
 
 			return GetOrCreateStringToken(tokenType, value);

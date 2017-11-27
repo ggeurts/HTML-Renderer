@@ -267,10 +267,24 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		{
 			if (this.IsQuotedString)
 			{
-				sb.Append('"')
-					.Append(_value)
-					.Replace("\"", "\\\"", 1, _value.Length)
-					.Append('"');
+				var quoteChar = EnsureQuoteChar(this.TokenType);
+				sb.Append(quoteChar);
+
+				if (_value != null)
+				{
+					// Append _value to string builder, while ensuring that embedded quote characters are escaped
+					var fragmentStart = 0;
+					var quoteIndex = _value.IndexOf(quoteChar);
+					while (quoteIndex >= 0)
+					{
+						sb.Append(_value, fragmentStart, quoteIndex - fragmentStart).Append("\\");
+						fragmentStart = quoteIndex;
+						quoteIndex = _value.IndexOf(quoteChar, fragmentStart + 1);
+					}
+					sb.Append(_value, fragmentStart, _value.Length - fragmentStart);
+				}
+
+				sb.Append(quoteChar);
 			}
 			else
 			{
@@ -289,6 +303,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		public override int GetHashCode()
 		{
 			return HashUtility.Hash((int)this.TokenType, _value.GetHashCode());
+		}
+
+		private static char EnsureQuoteChar(CssTokenType tokenType)
+		{
+			var result = (int)tokenType & 0xFF;
+			return result != 0
+				? (char)result
+				: '"';
 		}
 	}
 

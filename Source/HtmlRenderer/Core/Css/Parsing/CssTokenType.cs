@@ -23,6 +23,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		//Comment = 0x1000000,
 		CDO = 0x2000000,
 		CDC = 0x4000000,
+		Apostrophe = '\'',
+		Quote = '"',
 		Comma = ',',
 		Colon = ':',
 		HashSign = '#',
