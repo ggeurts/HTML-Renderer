@@ -5,17 +5,17 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System.Xml.Linq;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	internal class CssTypeNameSelector : CssTypeSelector
+	internal class CssElementNameSelector : CssTypeSelector
 	{
 		private readonly XName _name;
 
-		public CssTypeNameSelector(XName name)
+		public CssElementNameSelector(XName name)
 		{
 			ArgChecker.AssertArgNotNull(name, nameof(name));
 			_name = name;
 		}
 
-		public CssTypeNameSelector(string localName)
+		public CssElementNameSelector(string localName)
 		{
 			_name = AnyNamespace + localName;
 		}
@@ -40,7 +40,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public override bool Equals(object obj)
 		{
-			var other = obj as CssTypeNameSelector;
+			var other = obj as CssElementNameSelector;
 			return other != null
 				&& _name == other._name;
 		}

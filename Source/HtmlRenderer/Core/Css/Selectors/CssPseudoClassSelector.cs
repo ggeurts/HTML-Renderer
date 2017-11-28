@@ -4,7 +4,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	public abstract class CssPseudoClassSelector : CssSelector
+	public abstract class CssPseudoClassSelector : CssSimpleSelector
 	{
 		#region Instance fields
 

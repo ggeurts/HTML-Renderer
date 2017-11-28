@@ -16,8 +16,6 @@
 
 		protected static readonly XNamespace AnyNamespace = XNamespace.Get("*");
 
-		public static readonly CssTypeSelector Universal = new CssUniversalSelector();
-
 		private static readonly PredefinedPseudoClassSelectorDictionary _predefinedSelectors =
 			new PredefinedPseudoClassSelectorDictionary
 			{
@@ -53,6 +51,15 @@
 
 		#endregion
 
+		#region Properties
+
+		public static CssTypeSelector Universal
+		{
+			get { return CssUniversalSelector.Explicit; }	
+		}
+
+		#endregion
+
 		#region Factory methods
 
 		/// <summary>
@@ -61,9 +68,9 @@
 		/// </summary>
 		/// <param name="ns">The namespace name.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssTypeSelector WithNamespace(XNamespace ns)
+		public static CssTypeSelector WithElementNamespace(XNamespace ns)
 		{
-			return new CssTypeNamespaceSelector(ns);
+			return new CssElementNamespaceSelector(ns);
 		}
 
 		/// <summary>
@@ -72,9 +79,9 @@
 		/// </summary>
 		/// <param name="name">The qualified name of matching elements.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssTypeSelector WithName(XName name)
+		public static CssTypeSelector WithElement(XName name)
 		{
-			return new CssTypeNameSelector(name);
+			return new CssElementNameSelector(name);
 		}
 
 		/// <summary>
@@ -82,9 +89,9 @@
 		/// </summary>
 		/// <param name="localName">The local name of matching elements.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssTypeSelector WithLocalName(string localName)
+		public static CssTypeSelector WithElement(string localName)
 		{
-			return new CssTypeNameSelector(localName);
+			return new CssElementNameSelector(localName);
 		}
 
 		/// <summary>
@@ -180,7 +187,7 @@
 		/// </summary>
 		/// <param name="name">The CSS pseudo-class name.</param>
 		/// <returns>The selector for the given CSS pseudo-class name.</returns>
-		public static CssSelector WithPseudoClass(string name)
+		public static CssSimpleSelector WithPseudoClass(string name)
 		{
 			ArgChecker.AssertArgNotNull(name, nameof(name));
 
@@ -190,44 +197,24 @@
 				: new CssUnknownPseudoClassSelector(name);
 		}
 
-		public static CssSelector NthChild(int cycleSize, int offset)
+		public static CssSimpleSelector NthChild(int cycleSize, int offset)
 		{
 			return new CssNthChildPseudoClassSelector(cycleSize, offset);
 		}
 
-		public static CssSelector NthLastChild(int cycleSize, int offset)
+		public static CssSimpleSelector NthLastChild(int cycleSize, int offset)
 		{
 			return new CssNthLastChildPseudoClassSelector(cycleSize, offset);
 		}
 
-		public static CssSelector NthOfType(int cycleSize, int offset)
+		public static CssSimpleSelector NthOfType(int cycleSize, int offset)
 		{
 			return new CssNthOfTypePseudoClassSelector(cycleSize, offset);
 		}
 
-		public static CssSelector NthLastOfType(int cycleSize, int offset)
+		public static CssSimpleSelector NthLastOfType(int cycleSize, int offset)
 		{
 			return new CssNthLastOfTypePseudoClassSelector(cycleSize, offset);
-		}
-
-		public static CssSelector Not(CssSimpleSelector selector)
-		{
-			return new CssNotPseudoClassSelector(selector);
-		}
-
-		public static CssCombinatorSelector Combinator(CssCombinator combinator, ICssSelectorSequence firstSequence)
-		{
-			return new CssCombinatorSelector(combinator, firstSequence, null);
-		}
-
-		public static CssCombinatorSelector Chain(CssCombinatorSelector chain, CssCombinator combinator, ICssSelectorSequence nextSequence)
-		{
-			return new CssCombinatorSelector(combinator, nextSequence, chain);
-		}
-
-		public static CssSelectorChain Chain(CssCombinatorSelector previous, ICssSelectorSequence finalSequence)
-		{
-			return new CssSelectorChain(finalSequence, previous);
 		}
 
 		#endregion

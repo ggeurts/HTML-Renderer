@@ -8,8 +8,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	/// </summary>
 	public interface ICssSelector
 	{
-		CssTypeSelector TypeSelector { get; }
-
 		/// <summary>
 		/// Indicates whether a given element matches this selector.
 		/// </summary>
@@ -24,9 +22,5 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		/// <param name="sb">The <see cref="StringBuilder"/> to which string representation of this selector is to be added.</param>
 		/// <param name="namespaceResolver">The XML namespace resolver to use for resolutaion of namespace prefixes.</param>
 		void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver);
-	}
-
-	public interface ICssSelectorSequence : ICssSelector
-	{
 	}
 }

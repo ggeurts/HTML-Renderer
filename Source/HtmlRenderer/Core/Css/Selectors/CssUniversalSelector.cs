@@ -6,6 +6,16 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 	internal class CssUniversalSelector : CssTypeSelector
 	{
+		public static readonly CssUniversalSelector Explicit = new CssUniversalSelector(false);
+		public static readonly CssUniversalSelector Implicit = new CssUniversalSelector(true);
+
+		private readonly bool _isImplied;
+
+		private CssUniversalSelector(bool isImplied)
+		{
+			_isImplied = isImplied;
+		}
+
 		public override bool Matches<TElement>(TElement element)
 		{
 			return true;
@@ -33,6 +43,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
 		{
+			if (_isImplied) return;
+
 			if (!string.IsNullOrEmpty(namespaceResolver?.LookupNamespace("")))
 			{
 				// We must write namespace prefix when default namespace has been defined 

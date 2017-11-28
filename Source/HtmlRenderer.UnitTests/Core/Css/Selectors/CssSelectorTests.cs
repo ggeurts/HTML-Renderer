@@ -1,6 +1,7 @@
 ﻿namespace HtmlRenderer.UnitTests.Core.Css.Selectors
 {
 	using System;
+	using System.Diagnostics.CodeAnalysis;
 	using System.Linq;
 	using System.Xml;
 	using System.Xml.Linq;
@@ -10,6 +11,7 @@
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	[TestFixture]
+	[SuppressMessage("ReSharper", "PossibleNullReferenceException")]
 	public class CssSelectorTests
 	{
 		#region Constants
@@ -80,12 +82,12 @@
 
 		#endregion
 
-		#region Type selectors
+		#region Element selectors
 
 		[Test]
-		public void TypeSelector_ForLocalNameInAnyNamespace()
+		public void ElementSelector_ForLocalNameInAnyNamespace()
 		{
-			var selector = CssSelector.WithLocalName("h1");
+			var selector = CssSelector.WithElement("h1");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
@@ -95,31 +97,31 @@
 			});
 		}
 
-		public void TypeSelector_ForLocalNameInAnyNamespace_ToString_WhenDefaultNamespaceExists()
+		public void ElementSelector_ForLocalNameInAnyNamespace_ToString_WhenDefaultNamespaceExists()
 		{
 			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithLocalName("h1").ToString(_namespaceManager), Is.EqualTo("*|h1"));
+			Assert.That(CssSelector.WithElement("h1").ToString(_namespaceManager), Is.EqualTo("*|h1"));
 		}
 
-		public void TypeSelector_ForLocalNameInAnyNamespace_ToString_WhenNoDefaultNamespaceExists()
+		public void ElementSelector_ForLocalNameInAnyNamespace_ToString_WhenNoDefaultNamespaceExists()
 		{
 			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithLocalName("h1").ToString(_namespaceManager), Is.EqualTo("h1"));
+			Assert.That(CssSelector.WithElement("h1").ToString(_namespaceManager), Is.EqualTo("h1"));
 		}
 
 		[Test]
-		public void TypeSelector_ForLocalNameInAnyNamespace_MatchesNodesByLocalName()
+		public void ElementSelector_ForLocalNameInAnyNamespace_MatchesNodesByLocalName()
 		{
-			var selector = CssSelector.WithLocalName("h1");
+			var selector = CssSelector.WithElement("h1");
 			Assert.That(selector.Matches(CreateElement("h1")), Is.True, "h1");
 			Assert.That(selector.Matches(CreateElement("h1", XHTML_NAMESPACE)), Is.True, "xhtml:h1");
 			Assert.That(selector.Matches(CreateElement("h2")), Is.False, "h2");
 		}
 
 		[Test]
-		public void TypeSelector_ForQualifiedNameInDefaultNamespace()
+		public void ElementSelector_ForQualifiedNameInDefaultNamespace()
 		{
-			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
+			var selector = CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE));
 
 			Assert.Multiple(() =>
 			{
@@ -131,18 +133,16 @@
 		}
 
 		[Test]
-		public void TypeSelector_ForQualifiedNameInDefaultNamespace_ToString()
+		public void ElementSelector_ForQualifiedNameInDefaultNamespace_ToString()
 		{
 			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("h1"));
+			Assert.That(CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("h1"));
 		}
 
 		[Test]
-		public void TypeSelector_ForQualifiedNameInDefaultNamespace_MatchesByQualifiedName()
+		public void ElementSelector_ForQualifiedNameInDefaultNamespace_MatchesByQualifiedName()
 		{
-			const string SOME_NAMESPACE = "http://test.org/schema";
-
-			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
+			var selector = CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE));
 			var xdoc = XDocument.Parse(string.Format(@"
 				<html xmlns='{0}' xmlns:t='{1}'>
 					<head />
@@ -160,11 +160,11 @@
 		}
 
 		[Test]
-		public void TypeSelector_ForQualifiedNameInNonDefaultNamespace()
+		public void ElementSelector_ForQualifiedNameInNonDefaultNamespace()
 		{
 			_namespaceManager.AddNamespace("xhtml", XHTML_NAMESPACE);
 
-			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
+			var selector = CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE));
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
@@ -175,19 +175,17 @@
 		}
 
 		[Test]
-		public void TypeSelector_ForQualifiedNameInNonDefaultNamespace_ToString()
+		public void ElementSelector_ForQualifiedNameInNonDefaultNamespace_ToString()
 		{
 			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
 			_namespaceManager.AddNamespace("t", SOME_NAMESPACE);
-			Assert.That(CssSelector.WithName(XName.Get("h1", SOME_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("t|h1"));
+			Assert.That(CssSelector.WithElement(XName.Get("h1", SOME_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("t|h1"));
 		}
 
 		[Test]
-		public void TypeSelector_ForQualifiedNameInNonDefaultNamespace_MatchesByQualifiedName()
+		public void ElementSelector_ForQualifiedNameInNonDefaultNamespace_MatchesByQualifiedName()
 		{
-			const string SOME_NAMESPACE = "http://test.org/schema";
-
-			var selector = CssSelector.WithName(XName.Get("h1", XHTML_NAMESPACE));
+			var selector = CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE));
 			var xdoc = XDocument.Parse(string.Format(@"
 				<html xmlns:s='{0}' xmlns:t='{1}'>
 					<head />
@@ -474,7 +472,7 @@
 		public void ClassSelector_Matches()
 		{
 			var selector = CssSelector.WithClass("sect");
-			var xdoc = XDocument.Parse(string.Format(@"
+			var xdoc = XDocument.Parse(@"
 				<html>
 					<head />
 					<body>
@@ -486,7 +484,7 @@
 						<p id='par6' class='' />
 						<p id='par7' />
 					</body>
-				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+				</html>");
 
 			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "par1", "par3", "par4", "par5" }));
@@ -513,7 +511,7 @@
 		public void IdSelector_Matches()
 		{
 			var selector = CssSelector.WithId("par1");
-			var xdoc = XDocument.Parse(string.Format(@"
+			var xdoc = XDocument.Parse(@"
 				<html>
 					<head />
 					<body>
@@ -524,7 +522,7 @@
 						<p id='' />
 						<p />
 					</body>
-				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+				</html>");
 
 			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "par1" }));
@@ -538,14 +536,14 @@
 		public void PseudoClassSelector_ForStandardPseudoclass()
 		{
 			var selector = CssSelector.WithPseudoClass("target");
-			Assert.That(selector, Is.Not.InstanceOf<CssSimpleSelector>());
+			Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 		}
 
 		[Test]
 		public void PseudoClassSelector_ForNonStandardPseudoclass()
 		{
 			var selector = CssSelector.WithPseudoClass("unknown");
-			Assert.That(selector, Is.Not.InstanceOf<CssSimpleSelector>());
+			Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 		}
 
 		[Test]
@@ -579,12 +577,57 @@
 
 		// TODO: Don't allow arbitrary parameterized pseudo classes such as :lang() or :nth-child()
 		// TODO: Add tests for :lang() and :nth-child() type selectors
+		// TODO: Add not() tests
 
 		#endregion
 
 		#region Combinator tests
 
-		
+		[Test]
+		public void DescendentCombinator_WithoutNesting()
+		{
+			var leftSelector = CssSelector.WithElement("h1");
+			var rightSelector = CssSelector.WithElement("em");
+			var selector = leftSelector.Combine(CssCombinator.Descendant, rightSelector);
+
+			Assert.That(selector.Subject, Is.SameAs(rightSelector), nameof(selector.Subject));
+		}
+
+		[Test]
+		public void DescendentCombinator_WithoutNesting_ToString()
+		{
+			var leftSelector = CssSelector.WithElement("h1");
+			var rightSelector = CssSelector.WithElement("em");
+			var selector = leftSelector.Combine(CssCombinator.Descendant, rightSelector);
+
+			Assert.That(selector.ToString(), Is.EqualTo("h1 em"));
+		}
+
+		[Test]
+		public void DescendentCombinator_WithNesting()
+		{
+			var selector1 = CssSelector.WithElement("div");
+			var selector2 = CssSelector.WithElement("ol");
+			var selector3 = CssSelector.WithElement("li");
+			var selector4 = CssSelector.WithElement("p");
+			var selector = selector1
+				.Combine(CssCombinator.Descendant, selector2)
+				.Combine(CssCombinator.Descendant, selector3)
+				.Combine(CssCombinator.Descendant, selector4);
+			Assert.That(selector.Subject, Is.SameAs(selector4), nameof(selector.Subject));
+		}
+
+		[Test]
+		public void DescendentCombinator_WithNesting_ToString()
+		{
+			var selector = CssSelector.WithElement("div")
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("ol"))
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("li"))
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("p"));
+
+			Assert.That(selector.ToString(), Is.EqualTo("div ol li p"));
+		}
+
 		#endregion
 
 		#region Factory methods

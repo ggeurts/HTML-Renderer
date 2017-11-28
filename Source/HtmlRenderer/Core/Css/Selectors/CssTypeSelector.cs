@@ -1,17 +1,13 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
+	using System.Collections.Immutable;
 	using System.Xml.Linq;
 
 	/// <summary>
 	/// Represents a CSS type selector.
 	/// </summary>
-	public abstract class CssTypeSelector : CssSimpleSelector, ICssSelectorSequence
+	public abstract class CssTypeSelector : CssSimpleSelector, ICssSelectorSubject
 	{
-		public CssTypeSelector TypeSelector
-		{
-			get { return this; }
-		}
-
 		internal CssTypeSelector()
 		{}
 
@@ -24,5 +20,25 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		/// Gets namespace of matching elements.
 		/// </summary>
 		public abstract XNamespace Namespace { get; }
+
+		public ICssSelectorSubject Subject
+		{
+			get { return this; }
+		}
+
+		public CssTypeSelector TypeSelector
+		{
+			get { return this; }
+		}
+
+		ImmutableArray<CssSelector> ICssSelectorSequence.OtherSelectors
+		{
+			get { return ImmutableArray<CssSelector>.Empty; }
+		}
+
+		CssPseudoElement ICssSelectorSubject.PseudoElement
+		{
+			get { return null; }
+		}
 	}
 }

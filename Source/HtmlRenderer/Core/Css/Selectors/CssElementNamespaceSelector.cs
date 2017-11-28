@@ -5,11 +5,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System.Xml.Linq;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	internal class CssTypeNamespaceSelector : CssTypeSelector
+	internal class CssElementNamespaceSelector : CssTypeSelector
 	{
 		private readonly XNamespace _namespace;
 
-		public CssTypeNamespaceSelector(XNamespace ns)
+		public CssElementNamespaceSelector(XNamespace ns)
 		{
 			ArgChecker.AssertArgNotNull(ns, nameof(ns));
 			_namespace = ns;
@@ -32,7 +32,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public override bool Equals(object obj)
 		{
-			var other = obj as CssTypeNamespaceSelector;
+			var other = obj as CssElementNamespaceSelector;
 			return other != null
 			       && _namespace == other._namespace;
 		}
