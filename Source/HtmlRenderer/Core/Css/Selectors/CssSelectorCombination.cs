@@ -16,7 +16,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			ArgChecker.AssertArgNotNull(leftOperand, nameof(leftOperand));
 			ArgChecker.AssertArgNotNull(rightOperand, nameof(rightOperand));
 			ArgChecker.AssertIsTrue<ArgumentException>(leftOperand.Subject.PseudoElement == null, 
-				"Pseudo-elements may only occur in the right operand of a combinator");
+				"Pseudo-elements are only allowed in the right operand of a combinator");
 			_combinator = combinator;
 			_leftOperand = leftOperand;
 			_rightOperand = rightOperand;
@@ -29,6 +29,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public override bool Matches<TElement>(TElement element)
 		{
+			if (!_rightOperand.Matches(element)) return false;
+
 			TElement relatedElement;
 			switch (_combinator)
 			{

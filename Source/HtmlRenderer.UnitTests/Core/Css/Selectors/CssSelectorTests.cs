@@ -581,10 +581,117 @@
 
 		#endregion
 
+		#region Sequence tests
+		
+		[Test]
+		public void SelectorSequence_WithTwoSelectors()
+		{
+			var typeSelector = CssSelector.WithElement("h1");
+			var extraSelector = CssSelector.WithId("chapter1");
+			var selector = typeSelector.Add(extraSelector);
+
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.TypeSelector, Is.SameAs(typeSelector), nameof(selector.TypeSelector));
+				Assert.That(selector.OtherSelectors, Is.EquivalentTo(new[] { extraSelector }), nameof(selector.OtherSelectors));
+				Assert.That(selector.Subject, Is.SameAs(selector), nameof(selector.Subject));
+			});
+		}
+
+		[Test]
+		public void SelectorSequence_WithTwoSelectors_ToString()
+		{
+			var selector = CssSelector.WithElement("h1")
+				.Add(CssSelector.WithId("chapter1"));
+			Assert.That(selector.ToString(), Is.EqualTo("h1#chapter1"));
+		}
+
+		[Test]
+		public void SelectorSequence_WithTwoSelectors_Matches()
+		{
+			var selector = CssSelector.WithElement("h1")
+				.Add(CssSelector.WithId("chapter1"));
+
+			var xdoc = XDocument.Parse(@"
+				<html>
+					<head />
+					<body>
+						<p id='chapter1' />
+						<h1 id='chapter1' />
+						<h1 id='ch2' />
+						<h1 id='ch3' />
+					</body>
+				</html>");
+
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements.Select(e => e.Name.LocalName + "." + e.Attribute("id").Value), Is.EquivalentTo(new[] { "h1.chapter1" }));
+		}
+
+		[Test]
+		public void SelectorSequence_WithThreeSelectors()
+		{
+			var typeSelector = CssSelector.WithElement("h1");
+			var extraSelectors = new[]
+			{
+				CssSelector.WithId("chapter1"),
+				CssSelector.WithPseudoClass("target")
+			};
+
+			var selector = typeSelector.Add(extraSelectors[0]);
+			for (var i = 1; i < extraSelectors.Length; i++)
+			{
+				selector = selector.Add(extraSelectors[i]);
+			}
+
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.TypeSelector, Is.SameAs(typeSelector), nameof(selector.TypeSelector));
+				Assert.That(selector.OtherSelectors, Is.EquivalentTo(extraSelectors), nameof(selector.OtherSelectors));
+				Assert.That(selector.Subject, Is.SameAs(selector), nameof(selector.Subject));
+			});
+		}
+
+		[Test]
+		public void SelectorSequence_WithThreeSelectors_ToString()
+		{
+			var selector = CssSelector.WithElement("h1")
+				.Add(CssSelector.WithId("chapter1"))
+				.Add(CssSelector.WithPseudoClass("target"));
+			Assert.That(selector.ToString(), Is.EqualTo("h1#chapter1:target"));
+
+		}
+
+		[Test]
+		public void SelectorSequence_WithThreeSelectors_Matches()
+		{
+			var selector = CssSelector.WithElement("h1")
+				.Add(CssSelector.WithId("chapter1"));
+
+			var pseudoClassInfo = Substitute.For<XElementPseudoClassInfo>();
+			pseudoClassInfo.IsTarget(Arg.Any<XElement>())
+				.Returns(call => "true".Equals(call.Arg<XElement>().Attribute("istarget")?.Value, StringComparison.OrdinalIgnoreCase));
+
+			var xdoc = XDocument.Parse(@"
+				<html>
+					<head />
+					<body>
+						<p id='chapter1' istarget='true' />
+						<h1 id='chapter1' istarget='true' />
+						<h1 id='ch2' istarget='true' />
+						<h1 id='ch3' />
+					</body>
+				</html>");
+
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e, pseudoClassInfo))).ToList();
+			Assert.That(matchingElements.Select(e => e.Name.LocalName + "." + e.Attribute("id").Value), Is.EquivalentTo(new[] { "h1.chapter1" }));
+		}
+
+		#endregion
+
 		#region Combinator tests
 
 		[Test]
-		public void DescendentCombinator_WithoutNesting()
+		public void DescendantCombinator_WithoutNesting()
 		{
 			var leftSelector = CssSelector.WithElement("h1");
 			var rightSelector = CssSelector.WithElement("em");
@@ -594,7 +701,7 @@
 		}
 
 		[Test]
-		public void DescendentCombinator_WithoutNesting_ToString()
+		public void DescendantCombinator_WithoutNesting_ToString()
 		{
 			var leftSelector = CssSelector.WithElement("h1");
 			var rightSelector = CssSelector.WithElement("em");
@@ -604,7 +711,7 @@
 		}
 
 		[Test]
-		public void DescendentCombinator_WithNesting()
+		public void DescendantCombinator_WithNesting()
 		{
 			var selector1 = CssSelector.WithElement("div");
 			var selector2 = CssSelector.WithElement("ol");
@@ -618,7 +725,7 @@
 		}
 
 		[Test]
-		public void DescendentCombinator_WithNesting_ToString()
+		public void DescendantCombinator_WithNesting_ToString()
 		{
 			var selector = CssSelector.WithElement("div")
 				.Combine(CssCombinator.Descendant, CssSelector.WithElement("ol"))
@@ -626,6 +733,59 @@
 				.Combine(CssCombinator.Descendant, CssSelector.WithElement("p"));
 
 			Assert.That(selector.ToString(), Is.EqualTo("div ol li p"));
+		}
+
+		[Test]
+		public void DescendantCombinator_WithNesting_Matches()
+		{
+			var selector = CssSelector.WithElement("div")
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("ol"))
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("li"))
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("p"));
+
+			var xdoc = XDocument.Parse(@"
+				<html>
+					<head />
+					<body>
+						<div id='div00'>
+							<ol id='ol01'>
+								<li id='li01'><p id='p01' /></li>
+								<li id='li02'><p id='p02_1' /><p id='p02_2' /></li>
+								<li id='li03' />
+								<li id='li04'><div id='div04'><p id='p04' /></div></li>
+								<div id='div05'>
+									<li id='li05'><p id='p05' /></li>
+								</div>
+							</ol>
+						</div>
+						<ol id='ol02'>
+							<li id='li06'><p id='p06' /></li>
+						</ol>
+					</body>
+				</html>");
+
+			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "p01", "p02_1", "p02_2", "p04", "p05" }));
+		}
+
+		[Test]
+		public void ChildCombinator_WithoutNesting()
+		{
+			var leftSelector = CssSelector.WithElement("h1");
+			var rightSelector = CssSelector.WithElement("em");
+			var selector = leftSelector.Combine(CssCombinator.Child, rightSelector);
+
+			Assert.That(selector.Subject, Is.SameAs(rightSelector), nameof(selector.Subject));
+		}
+
+		[Test]
+		public void ChildCombinator_WithoutNesting_ToString()
+		{
+			var leftSelector = CssSelector.WithElement("h1");
+			var rightSelector = CssSelector.WithElement("em");
+			var selector = leftSelector.Combine(CssCombinator.Child, rightSelector);
+
+			Assert.That(selector.ToString(), Is.EqualTo("h1 > em"));
 		}
 
 		#endregion
