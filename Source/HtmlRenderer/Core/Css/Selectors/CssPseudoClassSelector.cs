@@ -6,6 +6,12 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 	public abstract class CssPseudoClassSelector : CssSimpleSelector
 	{
+		#region Static fields
+
+		private static readonly CssSpecificity DefaultSpecificity = new CssSpecificity(0, 1, 0);
+
+		#endregion
+
 		#region Instance fields
 
 		private readonly string _name;
@@ -15,6 +21,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		#region Constructor(s)
 
 		protected CssPseudoClassSelector(string name)
+			: this(name, DefaultSpecificity)
+		{}
+
+		protected CssPseudoClassSelector(string name, CssSpecificity specificity)
+			: base(specificity)
 		{
 			ArgChecker.AssertArgNotNullOrEmpty(name, nameof(name));
 			_name = name.ToLowerInvariant();

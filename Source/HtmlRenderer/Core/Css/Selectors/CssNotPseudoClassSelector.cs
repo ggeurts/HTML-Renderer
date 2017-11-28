@@ -9,10 +9,15 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		private readonly CssSimpleSelector _selector;
 
 		public CssNotPseudoClassSelector(CssSimpleSelector selector)
-			: base("not")
+			: base("not", CalculateSpecificity(selector))
+		{
+			_selector = selector;
+		}
+
+		private static CssSpecificity CalculateSpecificity(CssSimpleSelector selector)
 		{
 			ArgChecker.AssertArgNotNull(selector, nameof(selector));
-			_selector = selector;
+			return selector.Specificity;
 		}
 
 		public CssSimpleSelector Selector

@@ -8,7 +8,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	/// </summary>
 	public abstract class CssTypeSelector : CssSimpleSelector, ICssSelectorSubject
 	{
-		internal CssTypeSelector()
+		internal CssTypeSelector(CssSpecificity specificity)
+			: base(specificity)
 		{}
 
 		/// <summary>

@@ -81,6 +81,7 @@
     <Compile Include="Core\Css\Selectors\CssSelectorExtensions.cs" />
     <Compile Include="Core\Css\Selectors\CssSimpleSelectorSequence.cs" />
     <Compile Include="Core\Css\Selectors\CssSimpleSelector.cs" />
+    <Compile Include="Core\Css\Selectors\CssSpecificity.cs" />
     <Compile Include="Core\Css\Selectors\CssStructuralPseudoClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssTargetPseudoClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssElementNameSelector.cs" />

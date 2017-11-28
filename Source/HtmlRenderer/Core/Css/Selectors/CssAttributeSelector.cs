@@ -14,6 +14,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	/// </summary>
 	public class CssAttributeSelector : CssSimpleSelector
 	{
+		private static readonly CssSpecificity DefaultSpecificity = new CssSpecificity(0, 1, 0);
+
 		private static readonly Func<string, StringComparison, bool> Always = (s, c) => true;
 		private static readonly Func<string, StringComparison, bool> Never = (s, c) => false;
 
@@ -23,12 +25,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		private Func<string, StringComparison, bool> _predicate;
 
 		internal CssAttributeSelector(XName name)
+			: base(DefaultSpecificity)
 		{
 			ArgChecker.AssertArgNotNull(name, nameof(name));
 			_name = name;
 		}
 
 		internal CssAttributeSelector(XName name, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
+			: base(DefaultSpecificity)
 		{
 			ArgChecker.AssertArgNotNull(name, nameof(name));
 			_name = name;
@@ -37,11 +41,13 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		}
 
 		internal CssAttributeSelector(string localName)
+			: base(DefaultSpecificity)
 		{
 			_name = AnyNamespace + localName;
 		}
 
 		internal CssAttributeSelector(string localName, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
+			: base(DefaultSpecificity)
 		{
 			_name = AnyNamespace + localName;
 			_matchOperator = matchOperator;
@@ -106,7 +112,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 			sb.Append(']');
 		}
-
 
 		private static Func<string, StringComparison, bool> CreatePredicate(CssAttributeMatchOperator matchOperator, string operand)
 		{

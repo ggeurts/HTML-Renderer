@@ -51,7 +51,7 @@
 
 		#endregion
 
-		#region Properties
+		#region Static properties
 
 		public static CssTypeSelector Universal
 		{
@@ -216,6 +216,21 @@
 		{
 			return new CssNthLastOfTypePseudoClassSelector(cycleSize, offset);
 		}
+
+		#endregion
+
+		#region Instance fields
+
+		protected CssSelector(CssSpecificity specificity)
+		{
+			this.Specificity = specificity;
+		}
+
+		#endregion
+
+		#region Properties
+
+		public CssSpecificity Specificity { get; }
 
 		#endregion
 

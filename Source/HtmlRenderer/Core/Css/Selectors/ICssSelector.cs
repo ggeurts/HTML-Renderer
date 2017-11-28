@@ -9,6 +9,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	public interface ICssSelector
 	{
 		/// <summary>
+		/// Gets the selector's specificity.
+		/// </summary>
+		CssSpecificity Specificity { get; }
+
+		/// <summary>
 		/// Indicates whether a given element matches this selector.
 		/// </summary>
 		/// <typeparam name="TElement">The element (wrapper) type.</typeparam>

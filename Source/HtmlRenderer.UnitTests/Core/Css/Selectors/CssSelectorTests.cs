@@ -50,6 +50,7 @@
 				Assert.That(selector.LocalName, Is.EqualTo("*"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 0)), nameof(selector.Specificity));
 			});
 		}
 
@@ -94,6 +95,7 @@
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 1)), nameof(selector.Specificity));
 			});
 		}
 
@@ -129,6 +131,7 @@
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 1)), nameof(selector.Specificity));
 			});
 		}
 
@@ -171,6 +174,7 @@
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 1)), nameof(selector.Specificity));
 			});
 		}
 
@@ -217,6 +221,7 @@
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 			});
 		}
 
@@ -256,6 +261,7 @@
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Exact), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.EqualTo("#some-target"), nameof(selector.MatchOperand));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 			});
 		}
 
@@ -295,6 +301,7 @@
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 			});
 		}
 
@@ -342,6 +349,7 @@
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.ContainsWord), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.EqualTo("test"), nameof(selector.MatchOperand));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 			});
 		}
 
@@ -386,6 +394,7 @@
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 			});
 		}
 
@@ -417,6 +426,7 @@
 				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.LanguageCode), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.EqualTo("fr"), nameof(selector.MatchOperand));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 			});
 		}
 
@@ -459,7 +469,7 @@
 		public void ClassSelector()
 		{
 			var selector = CssSelector.WithClass("sect");
-			Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
+			Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 		}
 
 		[Test]
@@ -498,7 +508,7 @@
 		public void IdSelector()
 		{
 			var selector = CssSelector.WithId("par1");
-			Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
+			Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(1, 0, 0)), nameof(selector.Specificity));
 		}
 
 		[Test]
@@ -536,14 +546,14 @@
 		public void PseudoClassSelector_ForStandardPseudoclass()
 		{
 			var selector = CssSelector.WithPseudoClass("target");
-			Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
+			Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 		}
 
 		[Test]
 		public void PseudoClassSelector_ForNonStandardPseudoclass()
 		{
 			var selector = CssSelector.WithPseudoClass("unknown");
-			Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
+			Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
 		}
 
 		[Test]
@@ -595,6 +605,7 @@
 				Assert.That(selector.TypeSelector, Is.SameAs(typeSelector), nameof(selector.TypeSelector));
 				Assert.That(selector.OtherSelectors, Is.EquivalentTo(new[] { extraSelector }), nameof(selector.OtherSelectors));
 				Assert.That(selector.Subject, Is.SameAs(selector), nameof(selector.Subject));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(1, 0, 1)), nameof(selector.Specificity));
 			});
 		}
 
@@ -648,6 +659,7 @@
 				Assert.That(selector.TypeSelector, Is.SameAs(typeSelector), nameof(selector.TypeSelector));
 				Assert.That(selector.OtherSelectors, Is.EquivalentTo(extraSelectors), nameof(selector.OtherSelectors));
 				Assert.That(selector.Subject, Is.SameAs(selector), nameof(selector.Subject));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(1, 1, 1)), nameof(selector.Specificity));
 			});
 		}
 
@@ -697,7 +709,11 @@
 			var rightSelector = CssSelector.WithElement("em");
 			var selector = leftSelector.Combine(CssCombinator.Descendant, rightSelector);
 
-			Assert.That(selector.Subject, Is.SameAs(rightSelector), nameof(selector.Subject));
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.Subject, Is.SameAs(rightSelector), nameof(selector.Subject));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 2)), nameof(selector.Specificity));
+			});
 		}
 
 		[Test]
@@ -721,7 +737,12 @@
 				.Combine(CssCombinator.Descendant, selector2)
 				.Combine(CssCombinator.Descendant, selector3)
 				.Combine(CssCombinator.Descendant, selector4);
-			Assert.That(selector.Subject, Is.SameAs(selector4), nameof(selector.Subject));
+
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.Subject, Is.SameAs(selector4), nameof(selector.Subject));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 4)), nameof(selector.Specificity));
+			});
 		}
 
 		[Test]
@@ -775,7 +796,11 @@
 			var rightSelector = CssSelector.WithElement("em");
 			var selector = leftSelector.Combine(CssCombinator.Child, rightSelector);
 
-			Assert.That(selector.Subject, Is.SameAs(rightSelector), nameof(selector.Subject));
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector.Subject, Is.SameAs(rightSelector), nameof(selector.Subject));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 2)), nameof(selector.Specificity));
+			});
 		}
 
 		[Test]

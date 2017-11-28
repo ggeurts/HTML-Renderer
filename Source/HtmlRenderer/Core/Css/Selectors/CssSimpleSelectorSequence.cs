@@ -12,28 +12,50 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	/// </summary>
 	internal class CssSimpleSelectorSequence : CssSelector, ICssSelectorSubject
 	{
+		#region Instance fields
+
 		private readonly CssTypeSelector _typeSelector;
 		private readonly ImmutableArray<CssSelector> _otherSelectors;
 		private readonly CssPseudoElement _pseudoElement;
 
+		#endregion
+
+		#region Constructor(s)
+
 		internal CssSimpleSelectorSequence(ICssSelectorSequence sequence, CssSimpleSelector otherSelector)
+			: base(CalculateSpecificity(sequence, otherSelector))
 		{
-			ArgChecker.AssertArgNotNull(sequence, nameof(sequence));
-			ArgChecker.AssertArgNotNull(otherSelector, nameof(otherSelector));
 			ArgChecker.AssertIsTrue<ArgumentException>(!(otherSelector is CssTypeSelector), "Selector sequence cannot contain more than one type selector.");
 			_typeSelector = sequence.TypeSelector;
 			_otherSelectors = sequence.OtherSelectors.Add(otherSelector);
 		}
 
-		internal CssSimpleSelectorSequence(ICssSelectorSequence sequence, CssPseudoElement pseudoElement)
+		private static CssSpecificity CalculateSpecificity(ICssSelectorSequence sequence, CssSimpleSelector otherSelector)
 		{
 			ArgChecker.AssertArgNotNull(sequence, nameof(sequence));
-			ArgChecker.AssertArgNotNull(pseudoElement, nameof(pseudoElement));
+			ArgChecker.AssertArgNotNull(otherSelector, nameof(otherSelector));
+			return sequence.Specificity + otherSelector.Specificity;
+		}
+
+		internal CssSimpleSelectorSequence(ICssSelectorSequence sequence, CssPseudoElement pseudoElement)
+			: base(CalculateSpecificity(sequence, pseudoElement))
+		{
 			ArgChecker.AssertIsTrue<ArgumentException>(sequence.Subject.PseudoElement == null, "Selector sequence cannot contain more than one pseudo-element.");
 			_typeSelector = sequence.TypeSelector;
 			_otherSelectors = sequence.OtherSelectors;
 			_pseudoElement = pseudoElement;
 		}
+
+		private static CssSpecificity CalculateSpecificity(ICssSelectorSequence sequence, CssPseudoElement pseudoElement)
+		{
+			ArgChecker.AssertArgNotNull(sequence, nameof(sequence));
+			ArgChecker.AssertArgNotNull(pseudoElement, nameof(pseudoElement));
+			return sequence.Specificity + new CssSpecificity(1, 0, 0);
+		}
+
+		#endregion
+
+		#region Properties
 
 		public ICssSelectorSubject Subject
 		{
@@ -54,6 +76,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		{
 			get { return _pseudoElement; }
 		}
+
+		#endregion
+
+		#region Public operations
 
 		public override bool Matches<TElement>(TElement element)
 		{
@@ -91,5 +117,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 				selector.ToString(sb, namespaceResolver);
 			}
 		}
+
+		#endregion
 	}
 }

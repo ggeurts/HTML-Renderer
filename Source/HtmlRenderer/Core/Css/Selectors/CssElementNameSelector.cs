@@ -10,12 +10,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		private readonly XName _name;
 
 		public CssElementNameSelector(XName name)
+			: base(new CssSpecificity(0, 0, 1))
 		{
 			ArgChecker.AssertArgNotNull(name, nameof(name));
 			_name = name;
 		}
 
 		public CssElementNameSelector(string localName)
+			: base(new CssSpecificity(0, 0, 1))
 		{
 			_name = AnyNamespace + localName;
 		}

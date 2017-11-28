@@ -6,9 +6,12 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 	internal class CssClassSelector : CssSimpleSelector
 	{
+		private static readonly CssSpecificity DefaultSpecificity = new CssSpecificity(0, 1, 0);
+
 		private readonly string _name;
 
 		public CssClassSelector(string name)
+			: base(DefaultSpecificity)
 		{
 			ArgChecker.AssertArgNotNullOrEmpty(name, nameof(name));
 			_name = name;

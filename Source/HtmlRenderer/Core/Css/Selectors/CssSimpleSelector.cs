@@ -5,6 +5,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 	public abstract class CssSimpleSelector : CssSelector
 	{
+		protected CssSimpleSelector(CssSpecificity specificity) 
+			: base(specificity)
+		{}
+
 		/// <summary>
 		/// Creates a selector that consists of the :not() pseudo-class with this selector as argument.
 		/// </summary>

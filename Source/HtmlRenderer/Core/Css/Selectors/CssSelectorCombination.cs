@@ -7,14 +7,19 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 	internal class CssSelectorCombination : CssSelector, ICssSelectorChain
 	{
+		#region Instance fields
+
 		private readonly CssCombinator _combinator;
 		private readonly ICssSelectorChain _leftOperand;
 		private readonly ICssSelectorSequence _rightOperand;
 
+		#endregion
+
+		#region Constructor(s)
+
 		internal CssSelectorCombination(CssCombinator combinator, ICssSelectorChain leftOperand, ICssSelectorSequence rightOperand)
+			: base(CalculateSpecificity(leftOperand, rightOperand))
 		{
-			ArgChecker.AssertArgNotNull(leftOperand, nameof(leftOperand));
-			ArgChecker.AssertArgNotNull(rightOperand, nameof(rightOperand));
 			ArgChecker.AssertIsTrue<ArgumentException>(leftOperand.Subject.PseudoElement == null, 
 				"Pseudo-elements are only allowed in the right operand of a combinator");
 			_combinator = combinator;
@@ -22,10 +27,25 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			_rightOperand = rightOperand;
 		}
 
+		private static CssSpecificity CalculateSpecificity(ICssSelectorChain leftOperand, ICssSelectorSequence rightOperand)
+		{
+			ArgChecker.AssertArgNotNull(leftOperand, nameof(leftOperand));
+			ArgChecker.AssertArgNotNull(rightOperand, nameof(rightOperand));
+			return leftOperand.Specificity + rightOperand.Specificity;
+		}
+
+		#endregion
+
+		#region Properties
+
 		public ICssSelectorSubject Subject
 		{
 			get { return _rightOperand.Subject; }
 		}
+
+		#endregion
+
+		#region Public methods
 
 		public override bool Matches<TElement>(TElement element)
 		{
@@ -80,6 +100,10 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			_rightOperand.ToString(sb, namespaceResolver);
 		}
 
+		#endregion
+
+		#region Private methods
+
 		private bool TryGetParent<TElement>(TElement element, bool immediateOnly, out TElement result) where TElement : IElementInfo<TElement>
 		{
 			while (!element.IsRoot)
@@ -99,5 +123,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			result = default(TElement);
 			return false;
 		}
+
+		#endregion
 	}
 }

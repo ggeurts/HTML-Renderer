@@ -12,6 +12,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		private readonly bool _isImplied;
 
 		private CssUniversalSelector(bool isImplied)
+			: base(default(CssSpecificity))
 		{
 			_isImplied = isImplied;
 		}

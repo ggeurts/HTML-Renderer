@@ -10,6 +10,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		private readonly XNamespace _namespace;
 
 		public CssElementNamespaceSelector(XNamespace ns)
+			: base(new CssSpecificity(0, 0, 1))
 		{
 			ArgChecker.AssertArgNotNull(ns, nameof(ns));
 			_namespace = ns;
