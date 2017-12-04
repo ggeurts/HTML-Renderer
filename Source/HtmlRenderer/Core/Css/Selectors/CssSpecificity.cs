@@ -1,6 +1,7 @@
 ﻿namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System;
+	using System.Globalization;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	public struct CssSpecificity : IEquatable<CssSpecificity>, IComparable<CssSpecificity>, IComparable
@@ -22,6 +23,29 @@
 		{
 			_value = value;
 		}
+
+		#endregion
+
+		#region Properties
+
+		#pragma warning disable IDE1006 // Naming Styles
+
+		private int a
+		{
+			get { return _value >> 20; }
+		}
+
+		private int b
+		{
+			get { return (_value >> 10) & 0x3FF; }
+		}
+
+		private int c
+		{
+			get { return _value & 0x3FF; }
+		}
+		
+		#pragma warning restore IDE1006 // Naming Styles
 
 		#endregion
 
@@ -106,6 +130,15 @@
 		public CssSpecificity Add(CssSpecificity other)
 		{
 			return new CssSpecificity(_value + other._value);
+		}
+
+		#endregion
+
+		#region String operations
+
+		public override string ToString()
+		{
+			return string.Format(CultureInfo.InvariantCulture, "{0},{1},{2}", a, b, c);
 		}
 
 		#endregion

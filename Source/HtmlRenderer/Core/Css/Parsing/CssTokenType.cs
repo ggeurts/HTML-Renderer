@@ -50,6 +50,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		MinusDelimiter = Delimiter | '-',
 		DotDelimiter = Delimiter | '.',
 		SolidusDelimiter = Delimiter | '/',
+		EqualsDelimiter = Delimiter | '=',
+		GreaterThanDelimiter = Delimiter | '>',
 		LessThanDelimiter = Delimiter | '<',
 		AtDelimiter = Delimiter | '@',
 		FloatingPointType = 0x10000000,

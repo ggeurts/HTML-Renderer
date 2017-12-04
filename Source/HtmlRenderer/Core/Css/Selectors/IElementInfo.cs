@@ -43,6 +43,6 @@
 		bool HasClass(string name);
 		bool HasId(string id);
 		bool HasDynamicState(CssDynamicElementState state);
-		bool TryGetPredecessor(ICssSelector selector, bool immediateOnly, out TElement result);
+		bool TryGetPredecessor(ICssElementMatcher selector, bool immediateOnly, out TElement result);
 	}
 }

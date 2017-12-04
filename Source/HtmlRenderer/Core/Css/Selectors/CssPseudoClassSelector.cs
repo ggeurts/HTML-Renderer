@@ -1,10 +1,8 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
-	using System.Text;
-	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	public abstract class CssPseudoClassSelector : CssSimpleSelector
+	public abstract class CssPseudoClassSelector : CssSimpleSelector, ICssElementMatcher
 	{
 		#region Static fields
 
@@ -35,7 +33,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		#region Properties
 
-		public string Name
+		public string ClassName
 		{
 			get { return _name; }
 		}
@@ -43,6 +41,13 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		#endregion
 
 		#region Public methods
+
+		public override void Apply(CssSelectorVisitor visitor)
+		{
+			visitor.VisitPseudoClassSelector(this);
+		}
+
+		public abstract bool Matches<TElement>(TElement element) where TElement : IElementInfo<TElement>;
 
 		public override bool Equals(object obj)
 		{
@@ -57,11 +62,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		public override int GetHashCode()
 		{
 			return _name.GetHashCode();
-		}
-
-		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
-		{
-			sb.Append(':').Append(_name);
 		}
 
 		#endregion

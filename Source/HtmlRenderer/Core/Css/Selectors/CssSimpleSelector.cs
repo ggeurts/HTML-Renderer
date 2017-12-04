@@ -15,8 +15,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		/// <returns>The newly created selector.</returns>
 		public CssSimpleSelector Negate()
 		{
-			ArgChecker.AssertIsTrue<InvalidOperationException>(!(this is CssNotPseudoClassSelector), "Double negation of selectors is not allowed");
-			return new CssNotPseudoClassSelector(this);
+			ArgChecker.AssertIsTrue<InvalidOperationException>(!(this is CssNegationSelector), "Double negation of selectors is not allowed");
+			return new CssNegationSelector(this);
 		}
 	}
 }

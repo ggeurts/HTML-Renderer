@@ -1,6 +1,7 @@
 ﻿namespace HtmlRenderer.UnitTests.Core.Css.Selectors
 {
 	using System;
+	using System.Collections.Generic;
 	using System.Diagnostics.CodeAnalysis;
 	using System.Linq;
 	using System.Xml;
@@ -48,28 +49,17 @@
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("*"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo("*"), nameof(selector.NamespacePrefix));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 0)), nameof(selector.Specificity));
 			});
 		}
 
-		public void UniversalSelector_ToString_NoDefaultNamespaceExists()
-		{
-			Assert.That(CssSelector.Universal.ToString(_namespaceManager), Is.EqualTo("*"));
-		}
-
 		[Test]
-		public void UniversalSelector_ToString_WhenDefaultNamespaceExists()
+		public void UniversalSelector_ToString()
 		{
 			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.Universal.ToString(_namespaceManager), Is.EqualTo("*|*"));
-		}
-
-		[Test]
-		public void UniversalSelector_ToString_WhenNoDefaultNamespaceExists()
-		{
-			Assert.That(CssSelector.Universal.ToString(_namespaceManager), Is.EqualTo("*"));
+			Assert.That(CssSelector.Universal.ToString(), Is.EqualTo("*|*"));
 		}
 
 		[Test]
@@ -77,7 +67,8 @@
 		{
 			var xdoc = XDocument.Parse("<html><head /><body /></html>");
 			var allElements = xdoc.Root.DescendantsAndSelf().ToList();
-			var matchingElements = allElements.Where(e => CssSelector.Universal.Matches(new XElementInfo(e)));
+
+			var matchingElements = Match(xdoc, CssSelector.Universal);
 			Assert.That(matchingElements, Is.EquivalentTo(allElements));
 		}
 
@@ -86,124 +77,159 @@
 		#region Element selectors
 
 		[Test]
-		public void ElementSelector_ForLocalNameInAnyNamespace()
+		public void ElementSelector_ForNameInUnspecifiedNamespace()
 		{
 			var selector = CssSelector.WithElement("h1");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.Null, nameof(selector.NamespacePrefix));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 1)), nameof(selector.Specificity));
 			});
 		}
 
-		public void ElementSelector_ForLocalNameInAnyNamespace_ToString_WhenDefaultNamespaceExists()
+		public void ElementSelector_ForNameInUnspecifiedNamespace_ToString()
 		{
-			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithElement("h1").ToString(_namespaceManager), Is.EqualTo("*|h1"));
-		}
-
-		public void ElementSelector_ForLocalNameInAnyNamespace_ToString_WhenNoDefaultNamespaceExists()
-		{
-			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithElement("h1").ToString(_namespaceManager), Is.EqualTo("h1"));
+			Assert.That(CssSelector.WithElement("h1").ToString(), Is.EqualTo("h1"));
 		}
 
 		[Test]
-		public void ElementSelector_ForLocalNameInAnyNamespace_MatchesNodesByLocalName()
+		public void ElementSelector_ForNameInUnspecifiedNamespace_MatchesNamesInAnyNamespace_WhenNoDefaultNamespaceDefined()
 		{
 			var selector = CssSelector.WithElement("h1");
-			Assert.That(selector.Matches(CreateElement("h1")), Is.True, "h1");
-			Assert.That(selector.Matches(CreateElement("h1", XHTML_NAMESPACE)), Is.True, "xhtml:h1");
-			Assert.That(selector.Matches(CreateElement("h2")), Is.False, "h2");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html xmlns:x='{0}'>
+					<head />
+					<body>
+						<h1 id='h1_1'>Title 1</h1>
+						<x:h1 id='h1_2'>Title 2</x:h1>
+						<h2 id='h2'>Title 2.1</h2>
+					</body>
+				</html>", XHTML_NAMESPACE));
+
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "h1_1", "h1_2" }));
 		}
 
 		[Test]
-		public void ElementSelector_ForQualifiedNameInDefaultNamespace()
+		public void ElementSelector_ForNameInUnspecifiedNamespace_MatchesNamesInDefaultNamespace_WhenDefaultNamespaceDefined()
 		{
-			var selector = CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE));
+			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
+
+			var selector = CssSelector.WithElement("h1");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html xmlns='{0}' xmlns:s='{1}'>
+					<head />
+					<body>
+						<h1 id='h1_1'>Title 1</h1>
+						<s:h1 id='h1_2'>Title 2</s:h1>
+						<h2 id='h2'>Title 2.1</h2>
+					</body>
+				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "h1_1" }));
+		}
+
+		[Test]
+		public void ElementSelector_ForNameInAnyNamespace()
+		{
+			var selector = CssSelector.WithElement("h1", "*");
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
+				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo("*"), nameof(selector.NamespacePrefix));
+				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 1)), nameof(selector.Specificity));
+			});
+		}
+
+		public void ElementSelector_ForNameInAnyNamespace_ToString()
+		{
+			Assert.That(CssSelector.WithElement("h1", "*").ToString(), Is.EqualTo("*|h1"));
+		}
+
+		[Test]
+		public void ElementSelector_ForNameInAnyNamespace_Matches()
+		{
+			var selector = CssSelector.WithElement("h1", "*");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html xmlns:x='{0}'>
+					<head />
+					<body>
+						<h1 id='h1_1'>Title 1</h1>
+						<x:h1 id='h1_2'>Title 2</x:h1>
+						<h2 id='h2'>Title 2.1</h2>
+					</body>
+				</html>", XHTML_NAMESPACE));
+
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "h1_1", "h1_2" }));
+		}
+
+
+		[Test]
+		public void ElementSelector_ForNameWithoutNamespace()
+		{
+			var selector = CssSelector.WithElement("h1", "");
 
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.Empty, nameof(selector.NamespacePrefix));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 1)), nameof(selector.Specificity));
 			});
 		}
 
 		[Test]
-		public void ElementSelector_ForQualifiedNameInDefaultNamespace_ToString()
+		public void ElementSelector_ForNameWithoutNamespace_ToString()
 		{
-			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("h1"));
+			Assert.That(CssSelector.WithElement("h1", "").ToString(), Is.EqualTo("|h1"));
 		}
 
 		[Test]
-		public void ElementSelector_ForQualifiedNameInDefaultNamespace_MatchesByQualifiedName()
+		public void ElementSelector_ForNameInNonDefaultNamespace()
 		{
-			var selector = CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE));
-			var xdoc = XDocument.Parse(string.Format(@"
-				<html xmlns='{0}' xmlns:t='{1}'>
-					<head />
-					<body>
-						<h1>Title 1</h1>
-						<t:h1>Title 1</t:h1>
-					</body>
-				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
-
-			var element1 = new XElementInfo(xdoc.Descendants(XName.Get("h1", XHTML_NAMESPACE)).First());
-			Assert.That(selector.Matches(element1), Is.True, "h1");
-
-			var element2 = new XElementInfo(xdoc.Descendants(XName.Get("h1", SOME_NAMESPACE)).First());
-			Assert.That(selector.Matches(element2), Is.False, "t:h1");
-		}
-
-		[Test]
-		public void ElementSelector_ForQualifiedNameInNonDefaultNamespace()
-		{
-			_namespaceManager.AddNamespace("xhtml", XHTML_NAMESPACE);
-
-			var selector = CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE));
+			var selector = CssSelector.WithElement("h1", "x");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("h1"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo("x"), nameof(selector.NamespacePrefix));
 				Assert.That(selector.TypeSelector, Is.SameAs(selector), nameof(selector.TypeSelector));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 0, 1)), nameof(selector.Specificity));
 			});
 		}
 
 		[Test]
-		public void ElementSelector_ForQualifiedNameInNonDefaultNamespace_ToString()
+		public void ElementSelector_ForNameInNonDefaultNamespace_ToString()
 		{
-			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			_namespaceManager.AddNamespace("t", SOME_NAMESPACE);
-			Assert.That(CssSelector.WithElement(XName.Get("h1", SOME_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("t|h1"));
+			Assert.That(CssSelector.WithElement("h1", "x").ToString(), Is.EqualTo("x|h1"));
 		}
 
 		[Test]
-		public void ElementSelector_ForQualifiedNameInNonDefaultNamespace_MatchesByQualifiedName()
+		public void ElementSelector_ForNameInNonDefaultNamespace_Matches()
 		{
-			var selector = CssSelector.WithElement(XName.Get("h1", XHTML_NAMESPACE));
+			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
+			_namespaceManager.AddNamespace("s", SOME_NAMESPACE);
+
+			var selector = CssSelector.WithElement("h1", "s");
 			var xdoc = XDocument.Parse(string.Format(@"
-				<html xmlns:s='{0}' xmlns:t='{1}'>
+				<html xmlns:x='{0}' xmlns:t='{1}'>
 					<head />
 					<body>
-						<s:h1>Title 1</s:h1>
-						<t:h1>Title 1</t:h1>
+						<x:h1 id='h1_1'>Title 1</x:h1>
+						<t:h1 id='h1_2'>Title 1</t:h1>
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var element1 = new XElementInfo(xdoc.Descendants(XName.Get("h1", XHTML_NAMESPACE)).First());
-			Assert.That(selector.Matches(element1), Is.True, "s:h1");
-
-			var element2 = new XElementInfo(xdoc.Descendants(XName.Get("h1", SOME_NAMESPACE)).First());
-			Assert.That(selector.Matches(element2), Is.False, "t:h1");
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "h1_2" }));
 		}
 
 		#endregion
@@ -211,14 +237,14 @@
 		#region Attribute selectors
 
 		[Test]
-		public void AttributeSelector_ForLocalNameWithoutNamespace_WithAnyValue()
+		public void AttributeSelector_ForNameWithoutNamespace_WithAnyValue()
 		{
-			var selector = CssSelector.WithAttribute(XNamespace.None + "href");
+			var selector = CssSelector.WithAttribute("href", "");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo(""), nameof(selector.NamespacePrefix));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
@@ -226,16 +252,16 @@
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameWithoutNamespace_WithAnyValue_ToString()
+		public void AttributeSelector_ForNameWithoutNamespace_WithAnyValue_ToString()
 		{
-			var selector = CssSelector.WithAttribute(XNamespace.None + "href");
-			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[href]"));
+			var selector = CssSelector.WithAttribute("href", "");
+			Assert.That(selector.ToString(), Is.EqualTo("[|href]"));
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameWithoutNamespace_WithAnyValue_MatchesByLocalName()
+		public void AttributeSelector_ForNameWithoutNamespace_WithAnyValue_Matches()
 		{
-			var selector = CssSelector.WithAttribute(XNamespace.None + "href");
+			var selector = CssSelector.WithAttribute("href", "");
 			var xdoc = XDocument.Parse(@"
 				<html>
 					<head />
@@ -245,20 +271,19 @@
 					</body>
 				</html>");
 
-			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
-			Assert.That(matchingElements, Has.Count.EqualTo(1));
-			Assert.That(matchingElements[0].Attribute("id").Value, Is.EqualTo("anchor1"));
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor1" }));
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameWithoutNamespace_WithExactValue()
+		public void AttributeSelector_ForNameWithoutNamespace_WithExactValue()
 		{
-			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "#some-target");
+			var selector = CssSelector.WithAttribute("href", "", CssAttributeMatchOperator.Exact, "#some-target");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.None), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo(""), nameof(selector.NamespacePrefix));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Exact), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.EqualTo("#some-target"), nameof(selector.MatchOperand));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
@@ -266,16 +291,16 @@
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameWithoutNamespace_WithExactValue_ToString()
+		public void AttributeSelector_ForNameWithoutNamespace_WithExactValue_ToString()
 		{
-			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "#some-target");
-			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[href=\"#some-target\"]"));
+			var selector = CssSelector.WithAttribute("href", "", CssAttributeMatchOperator.Exact, "#some-target");
+			Assert.That(selector.ToString(), Is.EqualTo("[|href=\"#some-target\"]"));
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameWithoutNamespace_WithExactValue_MatchesByLocalName()
+		public void AttributeSelector_ForNameWithoutNamespace_WithExactValue_Matches()
 		{
-			var selector = CssSelector.WithAttribute(XNamespace.None + "href", CssAttributeMatchOperator.Exact, "#another-target");
+			var selector = CssSelector.WithAttribute("href", "", CssAttributeMatchOperator.Exact, "#another-target");
 			var xdoc = XDocument.Parse(@"
 				<html>
 					<head />
@@ -285,20 +310,19 @@
 					</body>
 				</html>");
 
-			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
-			Assert.That(matchingElements, Has.Count.EqualTo(1));
-			Assert.That(matchingElements[0].Attribute("id").Value, Is.EqualTo("anchor2"));
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor2" }));
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue()
+		public void AttributeSelector_ForNameInUnspecifiedNamespace()
 		{
-			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
+			var selector = CssSelector.WithAttribute("href");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.Null, nameof(selector.NamespacePrefix));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
@@ -306,24 +330,18 @@
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_ToString_WhenDefaultNamespaceExists()
+		public void AttributeSelector_ForNameInUnspecifiedNamespace_WithAnyValue_ToString()
+		{
+			var selector = CssSelector.WithAttribute("href");
+			Assert.That(selector.ToString(), Is.EqualTo("[href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForNameInUnspecifiedNamespace_WithAnyValue_MatchesNamesWithoutNamespace_WhenDefaultNamespaceDefined()
 		{
 			_namespaceManager.AddNamespace("", XHTML_NAMESPACE);
-			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
-			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[*|href]"));
-		}
 
-		[Test]
-		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_ToString_WhenNoDefaultNamespaceExists()
-		{
-			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
-			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[*|href]"));
-		}
-
-		[Test]
-		public void AttributeSelector_ForLocalNameInAnyNamespace_WithAnyValue_Matches()
-		{
-			var selector = CssSelector.WithAttribute(XName.Get("href", "*"));
+			var selector = CssSelector.WithAttribute("href");
 			var xdoc = XDocument.Parse(string.Format(@"
 				<html xmlns:s='{0}' xmlns:t='{1}'>
 					<head />
@@ -334,19 +352,78 @@
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
-			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor1", "anchor2" }));
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor1" }));
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameInAnyNamespace_WithValueContainingWord()
+		public void AttributeSelector_ForNameInUnspecifiedNamespace_WithAnyValue_MatchesNamesInAnyNamespace_WhenNoDefaultNamespaceDefined()
 		{
-			var selector = CssSelector.WithAttribute(XName.Get("href", "*"), CssAttributeMatchOperator.ContainsWord, "test");
+			var selector = CssSelector.WithAttribute("href");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html xmlns:s='{0}' xmlns:t='{1}'>
+					<head />
+					<body>
+						<a id='anchor1' href='#some-target' />
+						<a id='anchor2' s:href='#another-target' />
+						<a id='anchor3' />
+					</body>
+				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor1", "anchor2" }));
+		}
+
+
+		[Test]
+		public void AttributeSelector_ForNameInAnyNamespace_WithAnyValue()
+		{
+			var selector = CssSelector.WithAttribute("href", "*");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get("*")), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo("*"), nameof(selector.NamespacePrefix));
+				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
+				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
+				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
+			});
+		}
+
+		[Test]
+		public void AttributeSelector_ForNameInAnyNamespace_WithAnyValue_ToString()
+		{
+			var selector = CssSelector.WithAttribute("href", "*");
+			Assert.That(selector.ToString(), Is.EqualTo("[*|href]"));
+		}
+
+		[Test]
+		public void AttributeSelector_ForNameInAnyNamespace_WithAnyValue_Matches()
+		{
+			var selector = CssSelector.WithAttribute("href", "*");
+			var xdoc = XDocument.Parse(string.Format(@"
+				<html xmlns:s='{0}' xmlns:t='{1}'>
+					<head />
+					<body>
+						<a id='anchor1' href='#some-target' />
+						<a id='anchor2' s:href='#another-target' />
+						<a id='anchor3' />
+					</body>
+				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
+
+			var matchingElements = Match(xdoc, selector);
+			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor1", "anchor2" }));
+		}
+
+		[Test]
+		public void AttributeSelector_ForNameInAnyNamespace_WithValueContainingWord()
+		{
+			var selector = CssSelector.WithAttribute("href", "*", CssAttributeMatchOperator.ContainsWord, "test");
+			Assert.Multiple(() =>
+			{
+				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
+				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo("*"), nameof(selector.NamespacePrefix));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.ContainsWord), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.EqualTo("test"), nameof(selector.MatchOperand));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
@@ -354,16 +431,16 @@
 		}
 
 		[Test]
-		public void AttributeSelector_ForLocalNameInAnyNamespace_WithValueContainingWord_ToString()
+		public void AttributeSelector_ForNameInAnyNamespace_WithValueContainingWord_ToString()
 		{
-			var selector = CssSelector.WithAttribute(XName.Get("href", "*"), CssAttributeMatchOperator.ContainsWord, "test");
-			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[*|href~=\"test\"]"));
+			var selector = CssSelector.WithAttribute("href", "*", CssAttributeMatchOperator.ContainsWord, "test");
+			Assert.That(selector.ToString(), Is.EqualTo("[*|href~=\"test\"]"));
 		}
 
 		[Test]
 		public void AttributeSelector_ForLocalNameInAnyNamespace_WithValueContainingWord_Matches()
 		{
-			var selector = CssSelector.WithAttribute(XName.Get("href", "*"), CssAttributeMatchOperator.ContainsWord, "test");
+			var selector = CssSelector.WithAttribute("href", "*", CssAttributeMatchOperator.ContainsWord, "test");
 			var xdoc = XDocument.Parse(string.Format(@"
 				<html xmlns:s='{0}' xmlns:t='{1}'>
 					<head />
@@ -377,21 +454,19 @@
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = Match(xdoc, selector);
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor2", "anchor3", "anchor4" }));
 		}
 
 		[Test]
 		public void AttributeSelector_ForQualifiedName_WithAnyValue()
 		{
-			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
-
-			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE));
+			var selector = CssSelector.WithAttribute("href", "x");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo("x"), nameof(selector.NamespacePrefix));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.Any), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.Null, nameof(selector.MatchOperand));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
@@ -399,31 +474,20 @@
 		}
 
 		[Test]
-		public void AttributeSelector_ForQualifiedName_WithAnyValue_ToString_WhenDefaultNamespaceExists()
+		public void AttributeSelector_ForQualifiedName_WithAnyValue_ToString()
 		{
-			_namespaceManager.AddNamespace("", SOME_NAMESPACE);
-			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("[x|href]"));
-		}
-
-		[Test]
-		public void AttributeSelector_ForQualifiedName_WithAnyValue_ToString_WhenNoDefaultNamespaceExists()
-		{
-			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
-			Assert.That(CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE)).ToString(_namespaceManager), Is.EqualTo("[x|href]"));
+			Assert.That(CssSelector.WithAttribute("href", "x").ToString(), Is.EqualTo("[x|href]"));
 		}
 
 		[Test]
 		public void AttributeSelector_ForQualifiedName_WithValueIsLanguageCode()
 		{
-			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
-
-			var selector = CssSelector.WithAttribute(XName.Get("href", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
+			var selector = CssSelector.WithAttribute("href", "x", CssAttributeMatchOperator.LanguageCode, "fr");
 			Assert.Multiple(() =>
 			{
 				Assert.That(selector, Is.InstanceOf<CssSimpleSelector>());
 				Assert.That(selector.LocalName, Is.EqualTo("href"), nameof(selector.LocalName));
-				Assert.That(selector.Namespace, Is.EqualTo(XNamespace.Get(XHTML_NAMESPACE)), nameof(selector.Namespace));
+				Assert.That(selector.NamespacePrefix, Is.EqualTo("x"), nameof(selector.NamespacePrefix));
 				Assert.That(selector.MatchOperator, Is.EqualTo(CssAttributeMatchOperator.LanguageCode), nameof(selector.MatchOperator));
 				Assert.That(selector.MatchOperand, Is.EqualTo("fr"), nameof(selector.MatchOperand));
 				Assert.That(selector.Specificity, Is.EqualTo(new CssSpecificity(0, 1, 0)), nameof(selector.Specificity));
@@ -433,31 +497,32 @@
 		[Test]
 		public void AttributeSelector_ForQualifiedName_WithValueIsLanguageCode_ToString()
 		{
-			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
-
-			var selector = CssSelector.WithAttribute(XName.Get("lang", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
-			Assert.That(selector.ToString(_namespaceManager), Is.EqualTo("[x|lang|=\"fr\"]"));
+			var selector = CssSelector.WithAttribute("lang", "x", CssAttributeMatchOperator.LanguageCode, "fr");
+			Assert.That(selector.ToString(), Is.EqualTo("[x|lang|=\"fr\"]"));
 		}
 
 		[Test]
 		public void AttributeSelector_ForQualifiedName_WithValueIsLanguageCode_Matches()
 		{
-			var selector = CssSelector.WithAttribute(XName.Get("lang", XHTML_NAMESPACE), CssAttributeMatchOperator.LanguageCode, "fr");
+			_namespaceManager.AddNamespace("x", XHTML_NAMESPACE);
+			_namespaceManager.AddNamespace("s", SOME_NAMESPACE);
+
+			var selector = CssSelector.WithAttribute("lang", "x", CssAttributeMatchOperator.LanguageCode, "fr");
 			var xdoc = XDocument.Parse(string.Format(@"
-				<html xmlns:s='{0}' xmlns:t='{1}'>
+				<html xmlns:x='{0}' xmlns:s='{1}'>
 					<head />
 					<body>
-						<a id='anchor1' s:lang='nl' />
-						<a id='anchor2' s:lang='fr' />
-						<a id='anchor3' s:lang='french' />
-						<a id='anchor4' s:lang='fr-FR' />
-						<a id='anchor5' s:lang='-fr' />
-						<a id='anchor6' t:lang='fr' />
+						<a id='anchor1' x:lang='nl' />
+						<a id='anchor2' x:lang='fr' />
+						<a id='anchor3' x:lang='french' />
+						<a id='anchor4' x:lang='fr-FR' />
+						<a id='anchor5' x:lang='-fr' />
+						<a id='anchor6' s:lang='fr' />
 						<a id='anchor7' />
 					</body>
 				</html>", XHTML_NAMESPACE, SOME_NAMESPACE));
 
-			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = Match(xdoc, selector);
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "anchor2", "anchor4" }));
 		}
 
@@ -612,7 +677,7 @@
 		[Test]
 		public void SelectorSequence_WithTwoSelectors_ToString()
 		{
-			var selector = CssSelector.WithElement("h1")
+			var selector = CssSelector.WithElement("h1", null)
 				.Add(CssSelector.WithId("chapter1"));
 			Assert.That(selector.ToString(), Is.EqualTo("h1#chapter1"));
 		}
@@ -620,7 +685,7 @@
 		[Test]
 		public void SelectorSequence_WithTwoSelectors_Matches()
 		{
-			var selector = CssSelector.WithElement("h1")
+			var selector = CssSelector.WithElement("h1", null)
 				.Add(CssSelector.WithId("chapter1"));
 
 			var xdoc = XDocument.Parse(@"
@@ -634,15 +699,15 @@
 					</body>
 				</html>");
 
-			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = Match(xdoc, selector);
 			Assert.That(matchingElements.Select(e => e.Name.LocalName + "." + e.Attribute("id").Value), Is.EquivalentTo(new[] { "h1.chapter1" }));
 		}
 
 		[Test]
 		public void SelectorSequence_WithThreeSelectors()
 		{
-			var typeSelector = CssSelector.WithElement("h1");
-			var extraSelectors = new[]
+			var typeSelector = CssSelector.WithElement("h1", null);
+			var extraSelectors = new CssSimpleSelector[]
 			{
 				CssSelector.WithId("chapter1"),
 				CssSelector.WithPseudoClass("target")
@@ -666,7 +731,7 @@
 		[Test]
 		public void SelectorSequence_WithThreeSelectors_ToString()
 		{
-			var selector = CssSelector.WithElement("h1")
+			var selector = CssSelector.WithElement("h1", null)
 				.Add(CssSelector.WithId("chapter1"))
 				.Add(CssSelector.WithPseudoClass("target"));
 			Assert.That(selector.ToString(), Is.EqualTo("h1#chapter1:target"));
@@ -676,7 +741,7 @@
 		[Test]
 		public void SelectorSequence_WithThreeSelectors_Matches()
 		{
-			var selector = CssSelector.WithElement("h1")
+			var selector = CssSelector.WithElement("h1", null)
 				.Add(CssSelector.WithId("chapter1"));
 
 			var pseudoClassInfo = Substitute.For<XElementPseudoClassInfo>();
@@ -694,7 +759,7 @@
 					</body>
 				</html>");
 
-			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e, pseudoClassInfo))).ToList();
+			var matchingElements = Match(xdoc, selector);
 			Assert.That(matchingElements.Select(e => e.Name.LocalName + "." + e.Attribute("id").Value), Is.EquivalentTo(new[] { "h1.chapter1" }));
 		}
 
@@ -719,8 +784,8 @@
 		[Test]
 		public void DescendantCombinator_WithoutNesting_ToString()
 		{
-			var leftSelector = CssSelector.WithElement("h1");
-			var rightSelector = CssSelector.WithElement("em");
+			var leftSelector = CssSelector.WithElement("h1", null);
+			var rightSelector = CssSelector.WithElement("em", null);
 			var selector = leftSelector.Combine(CssCombinator.Descendant, rightSelector);
 
 			Assert.That(selector.ToString(), Is.EqualTo("h1 em"));
@@ -748,10 +813,10 @@
 		[Test]
 		public void DescendantCombinator_WithNesting_ToString()
 		{
-			var selector = CssSelector.WithElement("div")
-				.Combine(CssCombinator.Descendant, CssSelector.WithElement("ol"))
-				.Combine(CssCombinator.Descendant, CssSelector.WithElement("li"))
-				.Combine(CssCombinator.Descendant, CssSelector.WithElement("p"));
+			var selector = CssSelector.WithElement("div", null)
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("ol", null))
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("li", null))
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("p", null));
 
 			Assert.That(selector.ToString(), Is.EqualTo("div ol li p"));
 		}
@@ -759,10 +824,10 @@
 		[Test]
 		public void DescendantCombinator_WithNesting_Matches()
 		{
-			var selector = CssSelector.WithElement("div")
-				.Combine(CssCombinator.Descendant, CssSelector.WithElement("ol"))
-				.Combine(CssCombinator.Descendant, CssSelector.WithElement("li"))
-				.Combine(CssCombinator.Descendant, CssSelector.WithElement("p"));
+			var selector = CssSelector.WithElement("div", null)
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("ol", null))
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("li", null))
+				.Combine(CssCombinator.Descendant, CssSelector.WithElement("p", null));
 
 			var xdoc = XDocument.Parse(@"
 				<html>
@@ -785,15 +850,15 @@
 					</body>
 				</html>");
 
-			var matchingElements = xdoc.Descendants().Where(e => selector.Matches(new XElementInfo(e))).ToList();
+			var matchingElements = Match(xdoc, selector);
 			Assert.That(matchingElements.Select(e => e.Attribute("id").Value), Is.EquivalentTo(new[] { "p01", "p02_1", "p02_2", "p04", "p05" }));
 		}
 
 		[Test]
 		public void ChildCombinator_WithoutNesting()
 		{
-			var leftSelector = CssSelector.WithElement("h1");
-			var rightSelector = CssSelector.WithElement("em");
+			var leftSelector = CssSelector.WithElement("h1", null);
+			var rightSelector = CssSelector.WithElement("em", null);
 			var selector = leftSelector.Combine(CssCombinator.Child, rightSelector);
 
 			Assert.Multiple(() =>
@@ -806,8 +871,8 @@
 		[Test]
 		public void ChildCombinator_WithoutNesting_ToString()
 		{
-			var leftSelector = CssSelector.WithElement("h1");
-			var rightSelector = CssSelector.WithElement("em");
+			var leftSelector = CssSelector.WithElement("h1", null);
+			var rightSelector = CssSelector.WithElement("em", null);
 			var selector = leftSelector.Combine(CssCombinator.Child, rightSelector);
 
 			Assert.That(selector.ToString(), Is.EqualTo("h1 > em"));
@@ -817,9 +882,10 @@
 
 		#region Factory methods
 
-		private XElementInfo CreateElement(string localName, string ns = null)
+		private IEnumerable<XElement> Match(XDocument xdoc, ICssSelector selector)
 		{
-			return new XElementInfo(new XElement(XName.Get(localName, ns ?? XNamespace.None.NamespaceName)));
+			var matcher = selector.BuildMatcher(_namespaceManager);
+			return xdoc.Descendants().Where(e => matcher.Matches(new XElementInfo(e)));
 		}
 
 		#endregion
@@ -972,7 +1038,7 @@
 				return (_pseudoClassInfo ?? XElementPseudoClassInfo.Default).HasDynamicState(_element, state);
 			}
 
-			public bool TryGetPredecessor(ICssSelector selector, bool immediateOnly, out XElementInfo result)
+			public bool TryGetPredecessor(ICssElementMatcher selector, bool immediateOnly, out XElementInfo result)
 			{
 				ArgChecker.AssertArgNotNull(selector, nameof(selector));
 

@@ -9,6 +9,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 	public abstract class CssToken : CssComponent
 	{
 		public static readonly CssToken Whitespace = new CssStringToken(CssTokenType.Whitespace, " ");
+		public new static readonly CssToken Empty = new CssStringToken(CssTokenType.Undefined, "");
 
 		private readonly CssTokenType _tokenType;
 
@@ -45,6 +46,16 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		public bool IsIdentifier
 		{
 			get { return (_tokenType & CssTokenType.Identifier) == CssTokenType.Identifier; }
+		}
+
+		public bool IsFunction
+		{
+			get { return (_tokenType & CssTokenType.Function) == CssTokenType.Function; }
+		}
+
+		public bool IsHash
+		{
+			get { return (_tokenType & CssTokenType.Hash) == CssTokenType.Hash; }
 		}
 
 		public bool IsMatchOperator

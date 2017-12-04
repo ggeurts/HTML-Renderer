@@ -32,7 +32,12 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public override void ToString(StringBuilder sb)
 		{
-			sb.Append(':', SingleColonNames.Contains(_name) ? 1 : 2).Append(_name);
+			sb.Append(':', AllowSingleColonPrefix(_name) ? 1 : 2).Append(_name);
+		}
+
+		public static bool AllowSingleColonPrefix(string name)
+		{
+			return SingleColonNames.Contains(name);
 		}
 	}
 }

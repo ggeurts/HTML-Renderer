@@ -2,11 +2,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System;
 	using System.Diagnostics.CodeAnalysis;
-	using System.Text;
-	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	internal abstract class CssStructuralPseudoClassSelector : CssPseudoClassSelector
+	public abstract class CssStructuralPseudoClassSelector : CssPseudoClassSelector
 	{
 		private readonly int _cycleSize;
 		private readonly int _offset;
@@ -16,6 +14,16 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		{
 			_cycleSize = cycleSize;
 			_offset = offset;
+		}
+
+		public int CycleSize
+		{
+			get { return _cycleSize; }
+		}
+
+		public int Offset
+		{
+			get { return _offset; }
 		}
 
 		[SuppressMessage("ReSharper", "PossibleNullReferenceException")]
@@ -33,40 +41,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		public override int GetHashCode()
 		{
 			return HashUtility.Hash(this.GetType().GetHashCode(), HashUtility.Hash(_cycleSize, _offset));
-		}
-
-		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
-		{
-			base.ToString(sb, namespaceResolver);
-			sb.Append('(');
-
-			bool useShortForm = false;
-			switch (_cycleSize)
-			{
-				case -1:
-					sb.Append("-n");
-					break;
-				case 0:
-					useShortForm = true;
-					break;
-				case 1:
-					sb.Append('n');
-					break;
-				default:
-					sb.Append(_cycleSize).Append('n');
-					break;
-			}
-
-			if (useShortForm || _offset < 0)
-			{
-				sb.Append(_offset);
-			}
-			else if (_offset > 0)
-			{
-				sb.Append('+').Append(_offset);
-			}
-
-			sb.Append(')');
 		}
 
 		protected bool Matches(int elementIndex)

@@ -5,7 +5,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	internal class CssSelectorCombination : CssSelector, ICssSelectorChain
+	public class CssSelectorCombination : CssSelector, ICssSelectorChain
 	{
 		#region Instance fields
 
@@ -40,37 +40,31 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		public ICssSelectorSubject Subject
 		{
-			get { return _rightOperand.Subject; }
+			get { return this.RightOperand.Subject; }
+		}
+
+		public CssCombinator Combinator
+		{
+			get { return _combinator; }
+		}
+
+		public ICssSelectorChain LeftOperand
+		{
+			get { return _leftOperand; }
+		}
+
+		public ICssSelectorSequence RightOperand
+		{
+			get { return _rightOperand; }
 		}
 
 		#endregion
 
 		#region Public methods
 
-		public override bool Matches<TElement>(TElement element)
+		public override void Apply(CssSelectorVisitor visitor)
 		{
-			if (!_rightOperand.Matches(element)) return false;
-
-			TElement relatedElement;
-			switch (_combinator)
-			{
-				case CssCombinator.Descendant:
-					if (!TryGetParent(element, false, out relatedElement)) return false;
-					break;
-				case CssCombinator.Child:
-					if (!TryGetParent(element, true, out relatedElement)) return false;
-					break;
-				case CssCombinator.AdjacentSibling:
-					if (!element.TryGetPredecessor(_rightOperand, true, out relatedElement)) return false;
-					break;
-				case CssCombinator.GeneralSibling:
-					if (!element.TryGetPredecessor(_rightOperand, false, out relatedElement)) return false;
-					break;
-				default:
-					return false;
-			}
-
-			return _leftOperand.Matches(relatedElement);
+			visitor.VisitSelectorCombination(this);
 		}
 
 		public override bool Equals(object obj)
@@ -79,49 +73,14 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 			var other = obj as CssSelectorCombination;
 			return other != null
-				&& _combinator == other._combinator
-				&& Equals(_leftOperand, other._leftOperand)
-				&& Equals(_rightOperand, other._rightOperand);
+				&& this.Combinator == other.Combinator
+				&& Equals(this.LeftOperand, other.LeftOperand)
+				&& Equals(this.RightOperand, other.RightOperand);
 		}
 
 		public override int GetHashCode()
 		{
-			return HashUtility.Hash((int)_combinator, _rightOperand.GetHashCode());
-		}
-
-		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
-		{
-			_leftOperand.ToString(sb, namespaceResolver);
-			sb.Append(' ');
-			if (_combinator != CssCombinator.Descendant)
-			{
-				sb.Append((char) _combinator).Append(' ');
-			}
-			_rightOperand.ToString(sb, namespaceResolver);
-		}
-
-		#endregion
-
-		#region Private methods
-
-		private bool TryGetParent<TElement>(TElement element, bool immediateOnly, out TElement result) where TElement : IElementInfo<TElement>
-		{
-			while (!element.IsRoot)
-			{
-				element = element.Parent;
-				if (_leftOperand.Matches(element))
-				{
-					result = element;
-					return true;
-				}
-				if (immediateOnly)
-				{
-					break;
-				}
-			}
-
-			result = default(TElement);
-			return false;
+			return HashUtility.Hash((int)this.Combinator, this.RightOperand.GetHashCode());
 		}
 
 		#endregion

@@ -33,6 +33,22 @@
 			_settings = settings ?? new CssTokenizerSettings();
 		}
 
+		/// <summary>
+		/// Gets line number of current token (1-based).
+		/// </summary>
+		public int Line
+		{
+			get { return _lineCount + 1; }
+		}
+
+		/// <summary>
+		/// Gets text column of current token (1-based)
+		/// </summary>
+		public int Column
+		{
+			get { return _reader.Position + 1 - _linePos; }
+		}
+
 		private CssTokenFactory TokenFactory
 		{
 			get { return _settings.TokenFactory; }
@@ -782,7 +798,7 @@
 
 		private void NotifyError(string message)
 		{
-			ParseError(this, new CssErrorEventArgs(_lineCount, _reader.Position - _linePos, message));
+			ParseError(this, new CssErrorEventArgs(this.Line, this.Column, message));
 		}
 	}
 }

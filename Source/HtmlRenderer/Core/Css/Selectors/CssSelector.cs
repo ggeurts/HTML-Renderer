@@ -2,19 +2,15 @@
 {
 	using System.Collections.Generic;
 	using System.Text;
-	using System.Xml;
-	using System.Xml.Linq;
 	using TheArtOfDev.HtmlRenderer.Core.Css.Parsing;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
-	public abstract class CssSelector : CssComponent
+	public abstract class CssSelector : CssComponent, ICssSelector
 	{
 		#region Static fields
 
-		protected const string AnyLocalName = "*";
-		protected const string AnyNamespacePrefix = "*";
-
-		protected static readonly XNamespace AnyNamespace = XNamespace.Get("*");
+		public const string AnyLocalName = "*";
+		public const string AnyNamespacePrefix = "*";
 
 		private static readonly PredefinedPseudoClassSelectorDictionary _predefinedSelectors =
 			new PredefinedPseudoClassSelectorDictionary
@@ -45,7 +41,7 @@
 
 			public void Add(CssPseudoClassSelector selector)
 			{
-				Add(selector.Name, selector);
+				Add(selector.ClassName, selector);
 			}
 		}
 
@@ -53,89 +49,101 @@
 
 		#region Static properties
 
-		public static CssTypeSelector Universal
-		{
-			get { return CssUniversalSelector.Explicit; }	
-		}
+		public static readonly CssTypeSelector Universal = new CssTypeSelector(AnyLocalName, AnyNamespacePrefix);
+		internal static readonly CssTypeSelector ImpliedUniversal = new CssTypeSelector(AnyLocalName, AnyNamespacePrefix);
 
 		#endregion
 
 		#region Factory methods
 
 		/// <summary>
-		/// Creates selector that matches elements with given namespace. Use namespace <see cref="XNamespace.None"/>
-		/// to match elements without a namespace.
+		/// Creates selector that matches elements with the namespace that is associated with the given namespace prefix.
 		/// </summary>
-		/// <param name="ns">The namespace name.</param>
+		/// <param name="namespacePrefix">A namespace prefix that is resolvable to the namespace of matching elements.
+		/// An empty value represents no namespace.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssTypeSelector WithElementNamespace(XNamespace ns)
+		public static CssTypeSelector WithElementNamespace(string namespacePrefix)
 		{
-			return new CssElementNamespaceSelector(ns);
+			return new CssTypeSelector(AnyLocalName, namespacePrefix);
 		}
 
 		/// <summary>
-		/// Creates selector that matches elements with given qualified name. Use namespace <see cref="XNamespace.None"/>
-		/// to match elements without a namespace.
+		/// Creates selector that matches elements with a given local name and the namespace that is associated with 
+		/// the given namespace prefix..
 		/// </summary>
-		/// <param name="name">The qualified name of matching elements.</param>
+		/// <param name="localName">The local name of matching elements.</param>
+		/// <param name="namespacePrefix">An optional namespace prefix for <paramref name="localName"/>. 
+		/// A <c>null</c> value represents the default namespace if a default namespace has been defined, 
+		/// or any namespace otherwise. A <see cref="string.Empty"/> value represents no namespace.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssTypeSelector WithElement(XName name)
+		public static CssTypeSelector WithElement(string localName, string namespacePrefix)
 		{
-			return new CssElementNameSelector(name);
+			return new CssTypeSelector(localName, namespacePrefix);
 		}
 
 		/// <summary>
-		/// Creates selector that matches elements with given local name in any namespace, including those without a namespace.
+		/// Creates selector that matches elements with given local name in any namespace, if no default namespace 
+		/// has been specified in the CSS document. Otherwise matches element with the given local name in the default 
+		/// namespace.
 		/// </summary>
 		/// <param name="localName">The local name of matching elements.</param>
 		/// <returns>The newly created selector.</returns>
 		public static CssTypeSelector WithElement(string localName)
 		{
-			return new CssElementNameSelector(localName);
+			return new CssTypeSelector(localName, null);
 		}
 
 		/// <summary>
 		/// Creates selector for elements that have a certain attribute.
 		/// </summary>
-		/// <param name="name">Qualified name of matching attributes.</param>
+		/// <param name="localName">The local name of matching attributes.</param>
+		/// <param name="namespacePrefix">An optional namespace prefix for <paramref name="localName"/>. 
+		/// A <c>null</c> value represents any namespace. A <see cref="string.Empty"/> value represents
+		/// no namespace.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssAttributeSelector WithAttribute(XName name)
+		public static CssAttributeSelector WithAttribute(string localName, string namespacePrefix)
 		{
-			return new CssAttributeSelector(name);
+			return new CssAttributeSelector(localName, namespacePrefix ?? AnyNamespacePrefix);
 		}
 
 		/// <summary>
 		/// Creates selector for elements that have an attribute whose value satisfies a given predicate.
 		/// </summary>
-		/// <param name="name">Qualified name of matching attributes.</param>
+		/// <param name="localName">The local name of matching attributes.</param>
+		/// <param name="namespacePrefix">An optional namespace prefix for <paramref name="localName"/>. 
+		/// A <c>null</c> value represents any namespace. A <see cref="string.Empty"/> value represents
+		/// no namespace.</param>
 		/// <param name="matchOperator">An attribute string value matching operator.</param>
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssAttributeSelector WithAttribute(XName name, CssAttributeMatchOperator matchOperator, string matchOperand)
+		public static CssAttributeSelector WithAttribute(string localName, string namespacePrefix, CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
-			return WithAttribute(name, matchOperator, new CssStringToken(CssTokenType.QuotedString | CssTokenType.Quote, matchOperand));
+			return WithAttribute(localName, namespacePrefix, matchOperator, new CssStringToken(CssTokenType.QuotedString | CssTokenType.Quote, matchOperand));
 		}
 
 		/// <summary>
 		/// Creates selector for elements that have an attribute whose value satisfies a given predicate.
 		/// </summary>
-		/// <param name="name">Qualified name of matching attributes.</param>
+		/// <param name="localName">The local name of matching attributes.</param>
+		/// <param name="namespacePrefix">An optional namespace prefix for <paramref name="localName"/>. 
+		/// A <c>null</c> value represents any namespace. A <see cref="string.Empty"/> value represents
+		/// no namespace.</param>
 		/// <param name="matchOperator">An attribute string value matching operator.</param>
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
 		/// <returns>The newly created selector.</returns>
-		internal static CssAttributeSelector WithAttribute(XName name, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
+		internal static CssAttributeSelector WithAttribute(string localName, string namespacePrefix, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
 		{
-			return new CssAttributeSelector(name, matchOperator, matchOperand);
+			return new CssAttributeSelector(localName, namespacePrefix, matchOperator, matchOperand);
 		}
 
 		/// <summary>
-		/// Creates selector for elements that have an attribute with a given name in any namespace, including those without a namespace.
+		/// Creates selector for elements that have an attribute with a given name in any namespace.
 		/// </summary>
 		/// <param name="localName">The local name of matching attributes.</param>
 		/// <returns>The newly created selector.</returns>
 		public static CssAttributeSelector WithAttribute(string localName)
 		{
-			return new CssAttributeSelector(localName);
+			return new CssAttributeSelector(localName, null);
 		}
 
 		/// <summary>
@@ -145,21 +153,9 @@
 		/// <param name="matchOperator">An attribute string value matching operator.</param>
 		/// <param name="matchOperand">The value to which attribute values are matched.</param>
 		/// <returns>The newly created selector.</returns>
-		internal CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
+		public static CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, string matchOperand)
 		{
-			return WithAttribute(localName, matchOperator, new CssStringToken(CssTokenType.QuotedString | CssTokenType.Quote, matchOperand));
-		}
-
-		/// <summary>
-		/// Creates selector for elements that have an attribute whose value satisfies a given predicate.
-		/// </summary>
-		/// <param name="localName">The local name of matching attributes.</param>
-		/// <param name="matchOperator">An attribute string value matching operator.</param>
-		/// <param name="matchOperand">The value to which attribute values are matched.</param>
-		/// <returns>The newly created selector.</returns>
-		internal CssAttributeSelector WithAttribute(string localName, CssAttributeMatchOperator matchOperator, CssStringToken matchOperand)
-		{
-			return new CssAttributeSelector(localName, matchOperator, matchOperand);
+			return WithAttribute(localName, null, matchOperator, new CssStringToken(CssTokenType.QuotedString | CssTokenType.Quote, matchOperand));
 		}
 
 		/// <summary>
@@ -167,7 +163,7 @@
 		/// </summary>
 		/// <param name="id">Identifier of matching element.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssSimpleSelector WithId(string id)
+		public static CssIdSelector WithId(string id)
 		{
 			return new CssIdSelector(id);
 		}
@@ -177,7 +173,7 @@
 		/// </summary>
 		/// <param name="name">The CSS class name.</param>
 		/// <returns>The newly created selector.</returns>
-		public static CssSimpleSelector WithClass(string name)
+		public static CssClassSelector WithClass(string name)
 		{
 			return new CssClassSelector(name);
 		}
@@ -187,7 +183,7 @@
 		/// </summary>
 		/// <param name="name">The CSS pseudo-class name.</param>
 		/// <returns>The selector for the given CSS pseudo-class name.</returns>
-		public static CssSimpleSelector WithPseudoClass(string name)
+		public static CssPseudoClassSelector WithPseudoClass(string name)
 		{
 			ArgChecker.AssertArgNotNull(name, nameof(name));
 
@@ -237,41 +233,14 @@
 		#region Instance methods
 
 		/// <summary>
-		/// Indicates whether a given element matches this selector.
+		/// Applies visitor instance to this selector.
 		/// </summary>
-		/// <typeparam name="TElement">The element (wrapper) type.</typeparam>
-		/// <param name="element">The element to be matched.</param>
-		/// <returns>Returns <c>true</c> if <paramref name="element"/> matches this selector, or <c>false</c> otherwise.</returns>
-		public abstract bool Matches<TElement>(TElement element) where TElement : IElementInfo<TElement>;
-
-		public override string ToString()
-		{
-			return ToString(DefaultNamespaceManager);
-		}
-
-		public string ToString(IXmlNamespaceResolver namespaceResolver)
-		{
-			var sb = new StringBuilder();
-			ToString(sb, namespaceResolver);
-			return sb.ToString();
-		}
+		/// <param name="visitor"></param>
+		public abstract void Apply(CssSelectorVisitor visitor);
 
 		public sealed override void ToString(StringBuilder sb)
 		{
-			ToString(sb, DefaultNamespaceManager);
-		}
-
-		public abstract void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver);
-
-		private readonly XmlNamespaceManager DefaultNamespaceManager = new CssNamespaceManager();
-
-		private sealed class CssNamespaceManager : XmlNamespaceManager
-		{
-			public CssNamespaceManager()
-				: base(new NameTable())
-			{
-				AddNamespace(AnyNamespacePrefix, AnyNamespace.NamespaceName);
-			}
+			Apply(new CssSelectorFormatterVisitor(sb));
 		}
 
 		#endregion

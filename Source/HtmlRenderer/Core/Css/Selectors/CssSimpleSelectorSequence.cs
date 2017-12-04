@@ -1,16 +1,15 @@
 namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	using System;
+	using System.Collections.Generic;
 	using System.Collections.Immutable;
 	using System.Linq;
-	using System.Text;
-	using System.Xml;
 	using TheArtOfDev.HtmlRenderer.Core.Utils;
 
 	/// <summary>
 	/// Represents a type selector followed by one or more simple selectors that are not type selectors.
 	/// </summary>
-	internal class CssSimpleSelectorSequence : CssSelector, ICssSelectorSubject
+	public class CssSimpleSelectorSequence : CssSelector, ICssSelectorSubject
 	{
 		#region Instance fields
 
@@ -72,7 +71,7 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			get { return _otherSelectors; }
 		}
 
-		CssPseudoElement ICssSelectorSubject.PseudoElement
+		public CssPseudoElement PseudoElement
 		{
 			get { return _pseudoElement; }
 		}
@@ -81,14 +80,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 		#region Public operations
 
-		public override bool Matches<TElement>(TElement element)
+		public override void Apply(CssSelectorVisitor visitor)
 		{
-			if (!_typeSelector.Matches(element)) return false;
-			foreach (var selector in _otherSelectors)
-			{
-				if (!selector.Matches(element)) return false;
-			}
-			return true;
+			visitor.VisitSelectorSequence(this);
 		}
 
 		public override bool Equals(object obj)
@@ -107,15 +101,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 				hash = HashUtility.Hash(hash, selector.GetHashCode());
 			}
 			return hash;
-		}
-
-		public override void ToString(StringBuilder sb, IXmlNamespaceResolver namespaceResolver)
-		{
-			_typeSelector.ToString(sb, namespaceResolver);
-			foreach (var selector in _otherSelectors)
-			{
-				selector.ToString(sb, namespaceResolver);
-			}
 		}
 
 		#endregion
