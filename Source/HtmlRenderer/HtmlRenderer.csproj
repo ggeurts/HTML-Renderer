@@ -57,11 +57,14 @@
     <Compile Include="Core\Css\Parsing\CssParserExtensions.cs" />
     <Compile Include="Core\Css\Parsing\CssReader.cs" />
     <Compile Include="Core\Css\Parsing\CssStylesheetGrammar.cs" />
+    <Compile Include="Core\Css\Parsing\CssSyntaxGrammar.cs" />
     <Compile Include="Core\Css\Parsing\CssTokenizerSettings.cs" />
     <Compile Include="Core\Css\Selectors\CssAttributeSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssCombinator.cs" />
+    <Compile Include="Core\Css\Selectors\CssCycleOffset.cs" />
     <Compile Include="Core\Css\Selectors\CssElementMatcherBuilderVisitor.cs" />
+    <Compile Include="Core\Css\Selectors\CssLanguagePseudoClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssPseudoElement.cs" />
     <Compile Include="Core\Css\Selectors\CssSelectorCombination.cs" />
     <Compile Include="Core\Css\Selectors\CssDynamicElementState.cs" />
@@ -80,7 +83,7 @@
     <Compile Include="Core\Css\Selectors\CssRootPseudoClassSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssSelector.cs" />
     <Compile Include="Core\Css\Selectors\CssSelectorExtensions.cs" />
-    <Compile Include="Core\Css\Selectors\CssSelectorGrammar.cs" />
+    <Compile Include="Core\Css\Parsing\CssSelectorGrammar.cs" />
     <Compile Include="Core\Css\Selectors\CssSelectorFormatterVisitor.cs" />
     <Compile Include="Core\Css\Selectors\CssSimpleSelectorSequence.cs" />
     <Compile Include="Core\Css\Selectors\CssSimpleSelector.cs" />

@@ -1033,6 +1033,15 @@
 
 			}
 
+			public bool HasLanguage(string ietfLanguageTag)
+			{
+				var actualLanguageTag = _element.Attribute(XNamespace.Xml + "lang")?.Value;
+				return ietfLanguageTag != null
+				       && actualLanguageTag != null
+				       && actualLanguageTag.StartsWith(ietfLanguageTag, StringComparison.OrdinalIgnoreCase)
+				       && (actualLanguageTag.Length == ietfLanguageTag.Length || actualLanguageTag[ietfLanguageTag.Length] == '-');
+			}
+
 			public bool HasDynamicState(CssDynamicElementState state)
 			{
 				return (_pseudoClassInfo ?? XElementPseudoClassInfo.Default).HasDynamicState(_element, state);

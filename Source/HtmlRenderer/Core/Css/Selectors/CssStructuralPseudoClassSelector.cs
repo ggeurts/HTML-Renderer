@@ -6,24 +6,22 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 	public abstract class CssStructuralPseudoClassSelector : CssPseudoClassSelector
 	{
-		private readonly int _cycleSize;
-		private readonly int _offset;
+		private readonly CssCycleOffset _cycleOffset;
 
-		protected CssStructuralPseudoClassSelector(string name, int cycleSize, int offset)
+		protected CssStructuralPseudoClassSelector(string name, CssCycleOffset cycleOffset)
 			: base(name)
 		{
-			_cycleSize = cycleSize;
-			_offset = offset;
+			_cycleOffset = cycleOffset;
 		}
 
 		public int CycleSize
 		{
-			get { return _cycleSize; }
+			get { return _cycleOffset.CycleSize; }
 		}
 
 		public int Offset
 		{
-			get { return _offset; }
+			get { return _cycleOffset.Offset; }
 		}
 
 		[SuppressMessage("ReSharper", "PossibleNullReferenceException")]
@@ -33,20 +31,23 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 
 			var other = obj as CssStructuralPseudoClassSelector;
 			return other != null
-			       && this.GetType() == other.GetType()
-			       && _cycleSize == other._cycleSize
-			       && _offset == other._offset;
+			       && this.ClassName == other.ClassName
+			       && _cycleOffset == other._cycleOffset;
 		}
 
 		public override int GetHashCode()
 		{
-			return HashUtility.Hash(this.GetType().GetHashCode(), HashUtility.Hash(_cycleSize, _offset));
+			return HashUtility.Hash(this.ClassName.GetHashCode(), _cycleOffset.GetHashCode());
+		}
+
+		public override void Apply(CssSelectorVisitor visitor)
+		{
+			visitor.VisitStructuralPseudoClassSelector(this);
 		}
 
 		protected bool Matches(int elementIndex)
 		{
-			int remainder;
-			return Math.DivRem(elementIndex - _offset, _cycleSize, out remainder) >= 0 && remainder == 0;
+			return _cycleOffset.Matches(elementIndex);
 		}
 	}
 }

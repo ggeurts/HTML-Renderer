@@ -60,6 +60,12 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			_sb.Append(':').Append(selector.ClassName);
 		}
 
+		public override void VisitLanguagePseudoClassSelector(CssLanguagePseudoClassSelector selector)
+		{
+			VisitPseudoClassSelector(selector);
+			_sb.Append('(').Append(selector.IetfLanfguageTag).Append(')');
+		}
+
 		public override void VisitStructuralPseudoClassSelector(CssStructuralPseudoClassSelector selector)
 		{
 			VisitPseudoClassSelector(selector);
@@ -92,7 +98,6 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			}
 
 			_sb.Append(')');
-
 		}
 
 		public override void VisitPseudoElement(CssPseudoElement element)

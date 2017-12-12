@@ -91,6 +91,11 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			_matcher = selector;
 		}
 
+		public override void VisitLanguagePseudoClassSelector(CssLanguagePseudoClassSelector selector)
+		{
+			_matcher = selector;
+		}
+
 		public override void VisitStructuralPseudoClassSelector(CssStructuralPseudoClassSelector selector)
 		{
 			_matcher = selector;

@@ -2,8 +2,8 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 {
 	internal class CssNthLastOfTypePseudoClassSelector : CssStructuralPseudoClassSelector
 	{
-		public CssNthLastOfTypePseudoClassSelector(int cycleSize, int offset)
-			: base("nth-last-of-type", cycleSize, offset)
+		public CssNthLastOfTypePseudoClassSelector(CssCycleOffset cycleOffset)
+			: base("nth-last-of-type", cycleOffset)
 		{ }
 
 		public override bool Matches<TElement>(TElement element)

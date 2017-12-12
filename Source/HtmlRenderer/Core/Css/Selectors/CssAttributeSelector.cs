@@ -123,16 +123,16 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 			       && _localName == other._localName
 			       && _namespacePrefix == other._namespacePrefix
 			       && _matchOperator == other._matchOperator
-			       && Equals(_matchOperand, other._matchOperand);
+			       && Equals(this.MatchOperand, other.MatchOperand);
 		}
 
 		public override int GetHashCode()
 		{
 			var hash = _localName.GetHashCode();
 			hash = HashUtility.Hash(hash, _namespacePrefix?.GetHashCode() ?? 0);
-			if (this.MatchOperator != CssAttributeMatchOperator.Any)
+			if (_matchOperator != CssAttributeMatchOperator.Any)
 			{
-				hash = HashUtility.Hash(hash, (int)this.MatchOperator);
+				hash = HashUtility.Hash(hash, (int)_matchOperator);
 				hash = HashUtility.Hash(hash, this.MatchOperand.GetHashCode());
 			}
 			return hash;

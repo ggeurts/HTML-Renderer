@@ -19,6 +19,9 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		public virtual void VisitPseudoClassSelector(CssPseudoClassSelector selector)
 		{}
 
+		public virtual void VisitLanguagePseudoClassSelector(CssLanguagePseudoClassSelector selector)
+		{ }
+
 		public virtual void VisitStructuralPseudoClassSelector(CssStructuralPseudoClassSelector selector)
 		{}
 

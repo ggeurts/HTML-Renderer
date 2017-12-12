@@ -70,5 +70,19 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Selectors
 		{
 			visitor.VisitTypeSelector(this);
 		}
+
+		public override bool Equals(object obj)
+		{
+			var other = obj as CssTypeSelector;
+			return other != null
+			       && _localName == other._localName
+			       && _namespacePrefix == other._namespacePrefix;
+		}
+
+		public override int GetHashCode()
+		{
+			return HashUtility.Hash(_localName.GetHashCode(), _namespacePrefix?.GetHashCode() ?? 0);
+		}
+
 	}
 }

@@ -52,6 +52,8 @@
     <Compile Include="Core\CssDataTests.cs" />
     <Compile Include="Core\Css\Parsing\CssParserTests.cs" />
     <Compile Include="Core\Css\Parsing\CssTokenizerTests.cs" />
+    <Compile Include="Core\Css\Selectors\CssCycleOffsetTests.cs" />
+    <Compile Include="Core\Css\Selectors\CssSelectorParserTests.cs" />
     <Compile Include="Core\Css\Selectors\CssSelectorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

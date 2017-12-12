@@ -269,33 +269,18 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 
 		public override string ToString()
 		{
-			return this.IsQuotedString 
-				? "\"" + _value.Replace("\"", "\\\"") + "\"" 
-				: _value;
+			if (!this.IsQuotedString) return _value;
+
+			var sb = new StringBuilder();
+			AppendQuotedString(sb, _value, EnsureQuoteChar(this.TokenType));
+			return sb.ToString();
 		}
 
 		public override void ToString(StringBuilder sb)
 		{
 			if (this.IsQuotedString)
 			{
-				var quoteChar = EnsureQuoteChar(this.TokenType);
-				sb.Append(quoteChar);
-
-				if (_value != null)
-				{
-					// Append _value to string builder, while ensuring that embedded quote characters are escaped
-					var fragmentStart = 0;
-					var quoteIndex = _value.IndexOf(quoteChar);
-					while (quoteIndex >= 0)
-					{
-						sb.Append(_value, fragmentStart, quoteIndex - fragmentStart).Append("\\");
-						fragmentStart = quoteIndex;
-						quoteIndex = _value.IndexOf(quoteChar, fragmentStart + 1);
-					}
-					sb.Append(_value, fragmentStart, _value.Length - fragmentStart);
-				}
-
-				sb.Append(quoteChar);
+				AppendQuotedString(sb, _value, EnsureQuoteChar(this.TokenType));
 			}
 			else
 			{
@@ -314,6 +299,27 @@ namespace TheArtOfDev.HtmlRenderer.Core.Css.Parsing
 		public override int GetHashCode()
 		{
 			return HashUtility.Hash((int)this.TokenType, _value.GetHashCode());
+		}
+
+		private static void AppendQuotedString(StringBuilder sb, string value, char quoteChar)
+		{
+			sb.Append(quoteChar);
+
+			if (value != null)
+			{
+				// Append _value to string builder, while ensuring that embedded quote characters are escaped
+				var fragmentStart = 0;
+				var quoteIndex = value.IndexOf(quoteChar);
+				while (quoteIndex >= 0)
+				{
+					sb.Append(value, fragmentStart, quoteIndex - fragmentStart).Append("\\");
+					fragmentStart = quoteIndex;
+					quoteIndex = value.IndexOf(quoteChar, fragmentStart + 1);
+				}
+				sb.Append(value, fragmentStart, value.Length - fragmentStart);
+			}
+
+			sb.Append(quoteChar);
 		}
 
 		private static char EnsureQuoteChar(CssTokenType tokenType)

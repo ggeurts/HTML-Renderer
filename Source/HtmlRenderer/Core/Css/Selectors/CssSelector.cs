@@ -27,10 +27,10 @@
 				new CssOnlyChildPseudoClassSelector(),
 				new CssOnlyOfTypePseudoClassSelector(),
 				new CssEmptyPseudoClassSelector(),
-				{ "first-child", new CssNthChildPseudoClassSelector(0, 1) },
-				{ "last-child", new CssNthLastChildPseudoClassSelector(0, 1) },
-				{ "first-of-type", new CssNthOfTypePseudoClassSelector(0, 1) },
-				{ "last-of-type", new CssNthLastOfTypePseudoClassSelector(0, 1) }
+				{ "first-child", new CssNthChildPseudoClassSelector(CssCycleOffset.First) },
+				{ "last-child", new CssNthLastChildPseudoClassSelector(CssCycleOffset.First) },
+				{ "first-of-type", new CssNthOfTypePseudoClassSelector(CssCycleOffset.First) },
+				{ "last-of-type", new CssNthLastOfTypePseudoClassSelector(CssCycleOffset.First) }
 			};
 
 		private class PredefinedPseudoClassSelectorDictionary : Dictionary<string, CssPseudoClassSelector>
@@ -103,7 +103,7 @@
 		/// <returns>The newly created selector.</returns>
 		public static CssAttributeSelector WithAttribute(string localName, string namespacePrefix)
 		{
-			return new CssAttributeSelector(localName, namespacePrefix ?? AnyNamespacePrefix);
+			return new CssAttributeSelector(localName, namespacePrefix);
 		}
 
 		/// <summary>
@@ -193,24 +193,29 @@
 				: new CssUnknownPseudoClassSelector(name);
 		}
 
-		public static CssSimpleSelector NthChild(int cycleSize, int offset)
+		public static CssLanguagePseudoClassSelector WithLanguage(string ietfLanguageTag)
 		{
-			return new CssNthChildPseudoClassSelector(cycleSize, offset);
+			return new CssLanguagePseudoClassSelector(ietfLanguageTag);
 		}
 
-		public static CssSimpleSelector NthLastChild(int cycleSize, int offset)
+		public static CssStructuralPseudoClassSelector NthChild(CssCycleOffset cycleOffset)
 		{
-			return new CssNthLastChildPseudoClassSelector(cycleSize, offset);
+			return new CssNthChildPseudoClassSelector(cycleOffset);
 		}
 
-		public static CssSimpleSelector NthOfType(int cycleSize, int offset)
+		public static CssStructuralPseudoClassSelector NthLastChild(CssCycleOffset cycleOffset)
 		{
-			return new CssNthOfTypePseudoClassSelector(cycleSize, offset);
+			return new CssNthLastChildPseudoClassSelector(cycleOffset);
 		}
 
-		public static CssSimpleSelector NthLastOfType(int cycleSize, int offset)
+		public static CssStructuralPseudoClassSelector NthOfType(CssCycleOffset cycleOffset)
 		{
-			return new CssNthLastOfTypePseudoClassSelector(cycleSize, offset);
+			return new CssNthOfTypePseudoClassSelector(cycleOffset);
+		}
+
+		public static CssStructuralPseudoClassSelector NthLastOfType(CssCycleOffset cycleOffset)
+		{
+			return new CssNthLastOfTypePseudoClassSelector(cycleOffset);
 		}
 
 		#endregion
